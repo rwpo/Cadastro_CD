@@ -536,13 +536,30 @@
       initCharts();
     });
 
-    function loadCatalog() {
-      const stored = localStorage.getItem('cd_collection_data');
-      if (stored) {
-        try { cdCatalog = JSON.parse(stored); } catch (e) { cdCatalog = [...INITIAL_CATALOG]; }
-      } else {
-        cdCatalog = [...INITIAL_CATALOG];
+    async function loadCatalog() {
+      try {
+        // Tenta buscar o arquivo JSON atualizado do repositório
+        const response = await fetch('cds.json?t=' + Date.now()); // '?t=' evita cache do navegador
+        if (!response.ok) throw new Error('Arquivo não encontrado');
+        cdCatalog = await response.json();
+      } catch (e) {
+        // Fallback caso o arquivo ainda não exista
+        cdCatalog = [
+          {
+            id: "cd-1",
+            title: "Master of Puppets",
+            artist: "Metallica",
+            genre: "Thrash Metal",
+            year: 1986,
+            country: "Estados Unidos",
+            cover: "https://upload.wikimedia.org/wikipedia/en/b/b2/Metallica_-_Master_of_Puppets_cover.jpg",
+            tracks: ["Battery", "Master of Puppets", "The Thing That Should Not Be", "Welcome Home (Sanitarium)", "Disposable Heroes", "Leper Messiah", "Orion", "Damage, Inc."]
+          }
+        ];
       }
+      renderCatalog();
+      populateFilterOptions();
+      updateStatistics();
     }
 
     function renderCatalog() {
