@@ -1,5 +1,37 @@
 [
   {
+    "id": "cd-1792598673361",
+    "title": "S&M",
+    "artist": "Metallica",
+    "genre": "Metal",
+    "year": 1999,
+    "country": "EUA",
+    "cover": "https://i.discogs.com/3GH6S-uvfM8xSoax2CXMCoVu4kaOHzKKkJ2ZxJqRhU4/rs:fit/g:sm/q:90/h:595/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTQzOTQx/MTYtMTc0MjYxNDM4/NS0yOTE0LmpwZWc.jpeg",
+    "tracks": [
+      "1. The Ecstasy Of Gold",
+      "2. The Call Of Ktulu",
+      "3. Master Of Puppets",
+      "4. Of Wolf And Man",
+      "5. The Thing That Should Not Be",
+      "6. Fuel",
+      "7. The Memory Remains",
+      "8. No Leaf Clover",
+      "9. Hero Of The Day",
+      "10. Devil's Dance",
+      "11. Bleeding Me",
+      "12. Nothing Else Matters",
+      "13. Until It Sleeps",
+      "14. For Whom The Bell Tolls",
+      "15. - Human",
+      "16. Wherever I May Roam",
+      "17. Outlaw Torn",
+      "18. Sad But True",
+      "19. One",
+      "20. Enter Sandman",
+      "21. Battery"
+    ]
+  },
+  {
     "id": "cd-1792598168188",
     "title": "Rosenrot",
     "artist": "Rammstein",
