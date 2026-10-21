@@ -141,15 +141,20 @@
             <i class="fa-solid fa-magnifying-glass text-metal-gold"></i> Buscar Online
           </button>
           <div class="h-6 w-px bg-metal-700 mx-1"></div>
-          <button onclick="exportJSON()" title="Exportar Backup JSON" class="p-2 rounded-xl bg-metal-800 hover:bg-metal-700 text-gray-300 hover:text-white border border-metal-700 transition">
+          
+          <!-- Botão Exportar Backup (Exporta diretamente como cds.json) -->
+          <button onclick="exportJSON()" title="Exportar Backup cds.json" class="p-2 rounded-xl bg-metal-800 hover:bg-metal-700 text-gray-300 hover:text-white border border-metal-700 transition">
             <i class="fa-solid fa-download"></i>
           </button>
+
           <button onclick="document.getElementById('import-file').click()" title="Importar Backup JSON" class="p-2 rounded-xl bg-metal-800 hover:bg-metal-700 text-gray-300 hover:text-white border border-metal-700 transition">
             <i class="fa-solid fa-upload"></i>
           </button>
           <input type="file" id="import-file" accept=".json" class="hidden" onchange="importJSON(event)">
-          <button onclick="handleLogout()" title="Sair do Modo Admin" class="p-2 rounded-xl bg-red-900/40 hover:bg-red-800 text-red-200 border border-red-500/30 transition">
-            <i class="fa-solid fa-right-from-bracket"></i>
+
+          <!-- Botão de Sair (Redireciona para main.html) -->
+          <button onclick="handleLogout()" title="Sair do Modo Admin e ir para o Site Público" class="px-3 py-2 rounded-xl bg-red-900/40 hover:bg-red-800 text-red-200 border border-red-500/30 transition flex items-center gap-1.5 font-bold text-xs">
+            <i class="fa-solid fa-right-from-bracket"></i> <span>Sair</span>
           </button>
         </div>
 
@@ -428,10 +433,8 @@
 
   <!-- APPLICATION LOGIC JS -->
   <script>
-    // CONFIGURAÇÃO DA SENHA DO PAINEL ADMIN
     const ADMIN_PASSWORD = "rock"; // <-- ALTERE A SUA SENHA AQUI SE DESEJAR
 
-    // VERIFICAÇÃO DE SESSÃO
     window.addEventListener('load', () => {
       if (sessionStorage.getItem('admin_authenticated') === 'true') {
         unlockAdminArea();
@@ -458,19 +461,15 @@
       document.getElementById('admin-content').classList.remove('hidden');
       document.getElementById('admin-content').classList.add('flex');
       
-      // Inicializa o catálogo
       loadCatalog();
-      renderCatalog();
-      populateFilterOptions();
-      initCharts();
     }
 
     function handleLogout() {
       sessionStorage.removeItem('admin_authenticated');
-      location.reload();
+      // Redireciona para o site público
+      window.location.href = 'main.html';
     }
 
-    // CATALOG DATA & LOGIC
     const INITIAL_CATALOG = [
       {
         id: "cd-1",
@@ -481,36 +480,6 @@
         country: "Estados Unidos",
         cover: "https://upload.wikimedia.org/wikipedia/en/b/b2/Metallica_-_Master_of_Puppets_cover.jpg",
         tracks: ["Battery", "Master of Puppets", "The Thing That Should Not Be", "Welcome Home (Sanitarium)", "Disposable Heroes", "Leper Messiah", "Orion", "Damage, Inc."]
-      },
-      {
-        id: "cd-2",
-        title: "Powerslave",
-        artist: "Iron Maiden",
-        genre: "Heavy Metal",
-        year: 1984,
-        country: "Reino Unido",
-        cover: "https://upload.wikimedia.org/wikipedia/en/1/1c/Iron_Maiden_-_Powerslave.jpg",
-        tracks: ["Aces High", "2 Minutes to Midnight", "Losfer Words (Big 'Orra)", "Flash of the Blade", "The Duellists", "Back in the Village", "Powerslave", "Rime of the Ancient Mariner"]
-      },
-      {
-        id: "cd-3",
-        title: "Holy Land",
-        artist: "Angra",
-        genre: "Power Metal / Folk",
-        year: 1996,
-        country: "Brasil",
-        cover: "https://upload.wikimedia.org/wikipedia/pt/2/29/Angra_Holy_Land.jpg",
-        tracks: ["Crossing", "In Excelsis", "Nova Era", "Millennium Sun", "Acid Rain", "Heroes of Sand", "Unholy Wars", "Silent Call"]
-      },
-      {
-        id: "cd-4",
-        title: "Back in Black",
-        artist: "AC/DC",
-        genre: "Hard Rock",
-        year: 1980,
-        country: "Austrália",
-        cover: "https://upload.wikimedia.org/wikipedia/commons/3/3e/ACDC_Back_in_Black_cover.svg",
-        tracks: ["Hells Bells", "Shoot to Thrill", "What Do You Do for Money Honey", "Given the Dog a Bone", "Let Me Put My Love into You", "Back in Black", "You Shook Me All Night Long", "Have a Drink on Me", "Shake a Leg", "Rock and Roll Ain't Noise Pollution"]
       }
     ];
 
@@ -529,6 +498,9 @@
         cdCatalog = [...INITIAL_CATALOG];
         saveCatalog();
       }
+      renderCatalog();
+      populateFilterOptions();
+      initCharts();
     }
 
     function saveCatalog() {
@@ -930,15 +902,16 @@
       searchOnlineAlbums();
     };
 
+    // EXPORTAR BACKUP (COM NOME FIXO cds.json)
     function exportJSON() {
       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(cdCatalog, null, 2));
       const downloadAnchor = document.createElement('a');
       downloadAnchor.setAttribute("href", dataStr);
-      downloadAnchor.setAttribute("download", `cadastro_cd_backup_${new Date().toISOString().slice(0,10)}.json`);
+      downloadAnchor.setAttribute("download", "cds.json"); // Nome do arquivo fixo
       document.body.appendChild(downloadAnchor);
       downloadAnchor.click();
       downloadAnchor.remove();
-      showToast('Backup exportado com sucesso!', 'success');
+      showToast('Arquivo cds.json exportado!', 'success');
     }
 
     function importJSON(event) {
