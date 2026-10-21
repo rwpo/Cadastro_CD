@@ -152,7 +152,7 @@
           </button>
           <input type="file" id="import-file" accept=".json" class="hidden" onchange="importJSON(event)">
 
-          <!-- Botão de Sair (Redireciona para main.html) -->
+          <!-- Botão de Sair (Redireciona para o link público oficial) -->
           <button onclick="handleLogout()" title="Sair do Modo Admin e ir para o Site Público" class="px-3 py-2 rounded-xl bg-red-900/40 hover:bg-red-800 text-red-200 border border-red-500/30 transition flex items-center gap-1.5 font-bold text-xs">
             <i class="fa-solid fa-right-from-bracket"></i> <span>Sair</span>
           </button>
@@ -466,8 +466,8 @@
 
     function handleLogout() {
       sessionStorage.removeItem('admin_authenticated');
-      // Redireciona para o site público
-      window.location.href = 'main.html';
+      // Redireciona para o link oficial do GitHub Pages
+      window.location.href = 'https://rwpo.github.io/Cadastro_CD/';
     }
 
     const INITIAL_CATALOG = [
@@ -490,14 +490,35 @@
     let countryChart = null;
     let targetDeleteId = null;
 
-    function loadCatalog() {
+    async function loadCatalog() {
+      // 1. Tenta carregar do localStorage primeiro se houver edições recentes do admin
       const stored = localStorage.getItem('cd_collection_data');
       if (stored) {
-        try { cdCatalog = JSON.parse(stored); } catch (e) { cdCatalog = [...INITIAL_CATALOG]; }
-      } else {
-        cdCatalog = [...INITIAL_CATALOG];
-        saveCatalog();
+        try {
+          cdCatalog = JSON.parse(stored);
+        } catch (e) {
+          cdCatalog = [];
+        }
       }
+
+      // 2. Se o localStorage estiver vazio, tenta buscar do cds.json (igual ao main.html)
+      if (!cdCatalog || cdCatalog.length === 0) {
+        try {
+          const response = await fetch('cds.json?t=' + Date.now());
+          if (response.ok) {
+            cdCatalog = await response.json();
+          }
+        } catch (e) {
+          console.warn('Não foi possível carregar cds.json');
+        }
+      }
+
+      // 3. Fallback final se ambos estiverem vazios
+      if (!cdCatalog || cdCatalog.length === 0) {
+        cdCatalog = [...INITIAL_CATALOG];
+      }
+
+      saveCatalog();
       renderCatalog();
       populateFilterOptions();
       initCharts();
@@ -902,12 +923,11 @@
       searchOnlineAlbums();
     };
 
-    // EXPORTAR BACKUP (COM NOME FIXO cds.json)
     function exportJSON() {
       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(cdCatalog, null, 2));
       const downloadAnchor = document.createElement('a');
       downloadAnchor.setAttribute("href", dataStr);
-      downloadAnchor.setAttribute("download", "cds.json"); // Nome do arquivo fixo
+      downloadAnchor.setAttribute("download", "cds.json");
       document.body.appendChild(downloadAnchor);
       downloadAnchor.click();
       downloadAnchor.remove();
