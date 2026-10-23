@@ -23,11 +23,10 @@
       onSnapshot, 
       doc, 
       setDoc, 
-      deleteDoc,
-      writeBatch 
+      deleteDoc 
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    // Configuração do Firebase do seu projeto
+    // Configuração do Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyA9F4adjWmwqwQJubmB_cGVDz_Hh8sbw1U",
       authDomain: "controlecd-241c6.firebaseapp.com",
@@ -42,10 +41,10 @@
     const db = getFirestore(app);
     const cdsCollection = collection(db, "cds");
 
-    // Disponibiliza as funções do Firebase no escopo global para interação com os botões
+    // Disponibiliza as funções do Firebase no escopo global
     window.db = db;
     window.cdsCollection = cdsCollection;
-    window.firebaseMethods = { setDoc, deleteDoc, doc, writeBatch };
+    window.firebaseMethods = { setDoc, deleteDoc, doc };
 
     // Escutar atualizações do Firestore em tempo real
     onSnapshot(cdsCollection, (snapshot) => {
@@ -118,7 +117,7 @@
     ::-webkit-scrollbar-thumb:hover { background: #485069; }
   </style>
 </head>
-<body class="bg-metal-900 text-gray-200 antialiased min-h-screen flex flex-col pb-12">
+<body class="bg-metal-900 text-gray-200 antialiased min-h-screen flex flex-col pb-28">
 
   <!-- TOP HEADER -->
   <header class="border-b border-metal-700 bg-metal-800/90 sticky top-0 z-40 backdrop-blur-md shadow-lg">
@@ -141,7 +140,7 @@
             </h1>
             <span id="admin-badge" class="bg-red-900/60 text-red-300 border border-red-500/30 text-[10px] font-extrabold px-2 py-0.5 rounded uppercase hidden">ADMIN</span>
           </div>
-          <p class="text-xs text-gray-400 font-medium">Acervo Digital Conectado ao Firebase Cloud</p>
+          <p class="text-xs text-gray-400 font-medium">Acervo Digital de Rock & Player de CDs</p>
         </div>
       </div>
 
@@ -157,7 +156,6 @@
 
       <!-- Admin Actions / Login Button -->
       <div class="flex items-center gap-2">
-        <!-- Controles visíveis apenas no modo Admin -->
         <div id="admin-controls" class="hidden flex items-center gap-2">
           <button onclick="openModal('add-modal')" class="px-3 py-2 rounded-xl bg-gradient-to-r from-red-700 to-red-900 hover:from-red-600 hover:to-red-800 text-white text-xs font-bold shadow transition flex items-center gap-1.5 border border-red-500/30">
             <i class="fa-solid fa-plus"></i> Novo CD
@@ -174,7 +172,6 @@
           <input type="file" id="import-file" accept=".json" class="hidden" onchange="importJSON(event)">
         </div>
 
-        <!-- Botão Login/Sair Admin -->
         <button id="auth-btn" onclick="toggleAdminAuth()" class="px-3.5 py-2 rounded-xl bg-metal-800 hover:bg-metal-700 text-metal-gold border border-metal-gold/30 font-bold text-xs shadow transition flex items-center gap-1.5">
           <i id="auth-icon" class="fa-solid fa-user-gear"></i> <span id="auth-label">Admin</span>
         </button>
@@ -187,23 +184,19 @@
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 flex-grow w-full">
 
     <!-- Toast Notifications -->
-    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+    <div id="toast-container" class="fixed bottom-24 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
     <!-- CATALOG SECTION -->
     <section id="section-catalog" class="space-y-6">
       
       <!-- Toolbar -->
       <div class="glass-card p-4 rounded-2xl flex flex-col lg:flex-row gap-4 items-center justify-between">
-        
-        <!-- Search Input -->
         <div class="relative w-full lg:w-72">
           <i class="fa-solid fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"></i>
           <input type="text" id="filter-search" oninput="renderCatalog()" placeholder="Filtrar por álbum, artista..." class="w-full pl-10 pr-4 py-2 bg-metal-900 border border-metal-700 rounded-xl text-sm focus:outline-none focus:border-metal-gold transition text-gray-200">
         </div>
 
         <div class="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-          
-          <!-- Sort -->
           <div class="flex items-center gap-1.5 bg-metal-900 border border-metal-700 rounded-xl px-2 py-1">
             <i class="fa-solid fa-arrow-down-a-z text-metal-gold text-xs pl-1"></i>
             <select id="sort-order" onchange="renderCatalog()" class="bg-transparent text-sm text-gray-300 focus:outline-none pr-1">
@@ -215,7 +208,6 @@
             </select>
           </div>
 
-          <!-- Filters -->
           <select id="filter-genre" onchange="renderCatalog()" class="bg-metal-900 border border-metal-700 rounded-xl px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-metal-gold">
             <option value="">Todos os Gêneros</option>
           </select>
@@ -229,7 +221,6 @@
             <span><i class="fa-solid fa-triangle-exclamation mr-1"></i>Incompletos</span>
           </label>
 
-          <!-- View Mode -->
           <div class="flex bg-metal-900 border border-metal-700 rounded-xl p-1 gap-1">
             <button id="view-grid-btn" onclick="setViewMode('grid')" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-metal-700 text-white shadow">
               <i class="fa-solid fa-th-large"></i>
@@ -238,11 +229,10 @@
               <i class="fa-solid fa-list"></i>
             </button>
           </div>
-
         </div>
       </div>
 
-      <!-- Catalog Cards Container -->
+      <!-- Catalog Container -->
       <div id="catalog-container"></div>
     </section>
 
@@ -312,6 +302,37 @@
     </section>
 
   </main>
+
+  <!-- WIDGET PLAYER FIXO NO RODAPÉ (TOCADOR DE CD / RÁDIO) -->
+  <div id="radio-player-bar" class="fixed bottom-0 left-0 right-0 bg-metal-800/95 backdrop-blur-md border-t border-metal-gold/30 p-3 z-50 transform translate-y-full transition-transform duration-300 shadow-2xl">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
+      
+      <!-- Miniatura e Detalhes da Faixa -->
+      <div class="flex items-center gap-3 w-full md:w-auto">
+        <img id="player-cover" src="https://placehold.co/100x100/232733/c0c0c0?text=CD" class="w-12 h-12 rounded-lg object-cover border border-metal-700 shadow cd-spin">
+        <div class="min-w-0">
+          <h4 id="player-track-title" class="text-sm font-bold text-white truncate">Nenhuma faixa selecionada</h4>
+          <p id="player-artist-album" class="text-xs text-metal-gold truncate">Selecione um CD para tocar</p>
+        </div>
+      </div>
+
+      <!-- Controles de Áudio -->
+      <div class="flex items-center gap-4">
+        <button onclick="playPrevTrack()" title="Faixa Anterior" class="text-gray-400 hover:text-white transition text-lg"><i class="fa-solid fa-backward-step"></i></button>
+        <button onclick="togglePlayPause()" title="Play / Pause" class="w-10 h-10 rounded-full bg-metal-gold text-metal-900 font-bold flex items-center justify-center hover:scale-105 transition shadow">
+          <i id="play-pause-icon" class="fa-solid fa-play"></i>
+        </button>
+        <button onclick="playNextTrack()" title="Próxima Faixa" class="text-gray-400 hover:text-white transition text-lg"><i class="fa-solid fa-forward-step"></i></button>
+      </div>
+
+      <!-- Visor de Reprodução Integrado do YouTube -->
+      <div class="w-full md:w-64 h-12 rounded-lg overflow-hidden bg-metal-900 border border-metal-700 relative">
+        <div id="youtube-iframe-holder" class="w-full h-full"></div>
+      </div>
+
+      <button onclick="closePlayerBar()" title="Fechar Tocador" class="text-gray-500 hover:text-white text-xs p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
+    </div>
+  </div>
 
   <!-- MODALS -->
 
@@ -473,9 +494,9 @@
     </div>
   </div>
 
-  <!-- JAVASCRIPT APPLICATION LOGIC -->
+  <!-- JAVASCRIPT LOGIC -->
   <script>
-    const ADMIN_PASSWORD = "rock"; // Senha do painel admin
+    const ADMIN_PASSWORD = "rock"; // Senha admin
 
     window.cdCatalog = [];
     let isAdmin = false;
@@ -484,6 +505,13 @@
     let genreChart = null;
     let countryChart = null;
     let targetDeleteId = null;
+
+    // ESTADO E LÓGICA DO PLAYER DE ÁUDIO (OPÇÃO 2)
+    let currentPlaylist = [];
+    let currentTrackIndex = 0;
+    let currentArtistName = "";
+    let currentAlbumTitle = "";
+    let isPlaying = false;
 
     window.addEventListener('load', () => {
       if (sessionStorage.getItem('admin_authenticated') === 'true') {
@@ -564,6 +592,74 @@
       setTimeout(() => { toast.classList.add('opacity-0', 'translate-y-2'); setTimeout(() => toast.remove(), 300); }, 3000);
     }
 
+    // LÓGICA DO PLAYER / RÁDIO
+    function playAlbum(cdId, startTrackIdx = 0) {
+      const cd = window.cdCatalog.find(item => item.id === cdId);
+      if (!cd || !cd.tracks || cd.tracks.length === 0) {
+        showToast("Este CD não possui faixas cadastradas para tocar.", "error");
+        return;
+      }
+
+      currentPlaylist = cd.tracks;
+      currentTrackIndex = startTrackIdx;
+      currentArtistName = cd.artist;
+      currentAlbumTitle = cd.title;
+
+      document.getElementById('player-cover').src = cd.cover || 'https://placehold.co/100x100/232733/c0c0c0?text=CD';
+      document.getElementById('player-artist-album').textContent = `${cd.artist} • ${cd.title}`;
+
+      document.getElementById('radio-player-bar').classList.remove('translate-y-full');
+      loadAndPlayTrack();
+    }
+
+    function loadAndPlayTrack() {
+      const trackName = currentPlaylist[currentTrackIndex];
+      document.getElementById('player-track-title').textContent = `${currentTrackIndex + 1}. ${trackName}`;
+
+      const query = encodeURIComponent(`${currentArtistName} ${trackName} audio`);
+      const iframeHolder = document.getElementById('youtube-iframe-holder');
+      
+      iframeHolder.innerHTML = `
+        <iframe width="100%" height="100%" src="https://www.youtube.com/embed?listType=search&list=${query}&autoplay=1" frameborder="0" allow="autoplay; encrypted-media"></iframe>
+      `;
+
+      isPlaying = true;
+      document.getElementById('play-pause-icon').className = "fa-solid fa-pause";
+      showToast(`Tocando: ${trackName}`, "info");
+    }
+
+    function togglePlayPause() {
+      if (currentPlaylist.length === 0) return;
+      const iframeHolder = document.getElementById('youtube-iframe-holder');
+      
+      if (isPlaying) {
+        iframeHolder.innerHTML = '';
+        isPlaying = false;
+        document.getElementById('play-pause-icon').className = "fa-solid fa-play";
+      } else {
+        loadAndPlayTrack();
+      }
+    }
+
+    function playNextTrack() {
+      if (currentPlaylist.length === 0) return;
+      currentTrackIndex = (currentTrackIndex + 1) % currentPlaylist.length;
+      loadAndPlayTrack();
+    }
+
+    function playPrevTrack() {
+      if (currentPlaylist.length === 0) return;
+      currentTrackIndex = (currentTrackIndex - 1 + currentPlaylist.length) % currentPlaylist.length;
+      loadAndPlayTrack();
+    }
+
+    function closePlayerBar() {
+      document.getElementById('radio-player-bar').classList.add('translate-y-full');
+      document.getElementById('youtube-iframe-holder').innerHTML = '';
+      isPlaying = false;
+    }
+
+    // RENDERIZAÇÃO DA COLEÇÃO
     window.renderCatalog = function() {
       const container = document.getElementById('catalog-container');
       const searchQuery = document.getElementById('filter-search').value.toLowerCase().trim();
@@ -609,25 +705,30 @@
                 <img src="${cd.cover || 'https://placehold.co/400x400/232733/c0c0c0?text=Sem+Capa'}" alt="${cd.title}" onerror="this.src='https://placehold.co/400x400/232733/c0c0c0?text=Sem+Capa'" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                 <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                   <span class="px-3 py-1.5 rounded-xl bg-metal-800/90 text-xs font-bold text-white border border-metal-600">
-                    <i class="fa-solid fa-eye mr-1"></i> Ver Faixas
+                    <i class="fa-solid fa-eye mr-1"></i> Detalhes
                   </span>
                 </div>
                 ${cd.country ? `<span class="absolute top-2 right-2 bg-metal-900/80 backdrop-blur-md border border-metal-700 text-xs px-2 py-0.5 rounded-md font-semibold text-gray-300"><i class="fa-solid fa-flag text-red-400 mr-1"></i>${cd.country}</span>` : ''}
                 ${incomplete && isAdmin ? `<span title="Informações pendentes" class="absolute top-2 left-2 bg-amber-500/90 text-metal-900 font-bold text-[10px] px-2 py-0.5 rounded shadow flex items-center gap-1"><i class="fa-solid fa-triangle-exclamation"></i> Incompleto</span>` : ''}
               </div>
-              <div class="p-4 flex-grow flex flex-col justify-between space-y-2">
+              <div class="p-4 flex-grow flex flex-col justify-between space-y-3">
                 <div>
                   <span class="text-[10px] font-bold uppercase tracking-wider text-metal-gold bg-metal-900/60 px-2 py-0.5 rounded border border-metal-700/50">${cd.genre || 'Desconhecido'}</span>
                   <h3 class="text-base font-bold text-white leading-snug line-clamp-1 mt-1">${cd.title}</h3>
                   <p class="text-sm font-medium text-gray-400 line-clamp-1">${cd.artist}</p>
                   <p class="text-xs text-gray-500">${cd.year || 'Ano N/A'}</p>
                 </div>
-                ${isAdmin ? `
-                  <div class="flex items-center justify-between pt-3 border-t border-metal-700/50">
-                    <button onclick="openEditModal('${cd.id}')" class="text-xs font-semibold text-gray-400 hover:text-metal-gold flex items-center gap-1 transition"><i class="fa-solid fa-pen"></i> Editar</button>
-                    <button onclick="confirmRemoveCd('${cd.id}')" class="text-xs font-semibold text-red-400 hover:text-red-300 flex items-center gap-1 transition"><i class="fa-solid fa-trash"></i> Excluir</button>
-                  </div>
-                ` : ''}
+
+                <div class="flex items-center gap-2 pt-2 border-t border-metal-700/50">
+                  <button onclick="playAlbum('${cd.id}')" class="flex-grow py-1.5 rounded-lg bg-gradient-to-r from-metal-gold to-yellow-600 text-metal-900 font-extrabold text-xs shadow hover:scale-105 transition flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-play text-[10px]"></i> Tocar Álbum
+                  </button>
+
+                  ${isAdmin ? `
+                    <button onclick="openEditModal('${cd.id}')" title="Editar" class="p-1.5 rounded-lg bg-metal-700 hover:bg-metal-600 text-gray-300 text-xs transition"><i class="fa-solid fa-pen"></i></button>
+                    <button onclick="confirmRemoveCd('${cd.id}')" title="Excluir" class="p-1.5 rounded-lg bg-red-900/40 border border-red-500/30 hover:bg-red-800 text-red-200 text-xs transition"><i class="fa-solid fa-trash"></i></button>
+                  ` : ''}
+                </div>
               </div>
             </div>
           `;
@@ -649,12 +750,16 @@
                   <p class="text-[11px] text-gray-500">${cd.year ? cd.year + ' • ' : ''}${cd.country || 'País N/A'}</p>
                 </div>
               </div>
-              ${isAdmin ? `
-                <div class="flex items-center gap-2 flex-shrink-0">
+
+              <div class="flex items-center gap-2 flex-shrink-0">
+                <button onclick="playAlbum('${cd.id}')" class="px-3 py-1.5 rounded-lg bg-metal-gold text-metal-900 font-extrabold text-xs shadow hover:scale-105 transition flex items-center gap-1">
+                  <i class="fa-solid fa-play text-[10px]"></i> Tocar
+                </button>
+                ${isAdmin ? `
                   <button onclick="openEditModal('${cd.id}')" class="p-2 rounded-lg bg-metal-700 hover:bg-metal-600 text-gray-200 text-xs transition"><i class="fa-solid fa-pen"></i></button>
                   <button onclick="confirmRemoveCd('${cd.id}')" class="p-2 rounded-lg bg-red-900/40 border border-red-500/30 hover:bg-red-800 text-red-200 text-xs transition"><i class="fa-solid fa-trash"></i></button>
-                </div>
-              ` : ''}
+                ` : ''}
+              </div>
             </div>
           `;
         }).join('');
@@ -798,12 +903,15 @@
               <span><i class="fa-solid fa-music mr-1"></i> ${cd.tracks ? cd.tracks.length : 0} faixas</span>
             </div>
             
-            ${isAdmin ? `
-              <div class="pt-4 flex gap-2">
-                <button onclick="openEditModal('${cd.id}')" class="px-3 py-1.5 rounded-lg bg-metal-700 hover:bg-metal-600 text-xs font-semibold text-white"><i class="fa-solid fa-pen mr-1"></i> Editar</button>
-                <button onclick="confirmRemoveCd('${cd.id}')" class="px-3 py-1.5 rounded-lg bg-red-900/40 hover:bg-red-800 text-xs font-semibold text-red-200 border border-red-500/30"><i class="fa-solid fa-trash mr-1"></i> Excluir</button>
-              </div>
-            ` : ''}
+            <div class="pt-4 flex gap-2">
+              <button onclick="playAlbum('${cd.id}')" class="px-4 py-2 rounded-xl bg-metal-gold text-metal-900 font-extrabold text-xs shadow hover:scale-105 transition flex items-center gap-1.5">
+                <i class="fa-solid fa-play"></i> Tocar Álbum
+              </button>
+              ${isAdmin ? `
+                <button onclick="openEditModal('${cd.id}')" class="px-3 py-2 rounded-xl bg-metal-700 hover:bg-metal-600 text-xs font-semibold text-white"><i class="fa-solid fa-pen mr-1"></i> Editar</button>
+                <button onclick="confirmRemoveCd('${cd.id}')" class="px-3 py-2 rounded-xl bg-red-900/40 hover:bg-red-800 text-xs font-semibold text-red-200 border border-red-500/30"><i class="fa-solid fa-trash mr-1"></i> Excluir</button>
+              ` : ''}
+            </div>
           </div>
         </div>
 
@@ -816,9 +924,14 @@
               ${cd.tracks.map((track, idx) => `
                 <li class="p-2.5 rounded-xl bg-metal-900/60 border border-metal-800 flex justify-between items-center group">
                   <span class="text-gray-300 font-medium">${idx + 1}. ${track}</span>
-                  <button onclick="fetchLyrics('${cd.artist.replace(/'/g, "\\'")}', '${track.replace(/'/g, "\\'")}')" class="text-xs text-metal-gold opacity-80 group-hover:opacity-100 hover:underline">
-                    <i class="fa-solid fa-align-left mr-1"></i> Letra
-                  </button>
+                  <div class="flex items-center gap-3">
+                    <button onclick="playAlbum('${cd.id}', ${idx})" class="text-xs text-metal-gold opacity-80 group-hover:opacity-100 hover:underline flex items-center gap-1">
+                      <i class="fa-solid fa-play text-[10px]"></i> Tocar
+                    </button>
+                    <button onclick="fetchLyrics('${cd.artist.replace(/'/g, "\\'")}', '${track.replace(/'/g, "\\'")}')" class="text-xs text-gray-400 hover:text-white">
+                      <i class="fa-solid fa-align-left"></i> Letra
+                    </button>
+                  </div>
                 </li>
               `).join('')}
             </ul>
