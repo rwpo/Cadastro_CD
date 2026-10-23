@@ -140,7 +140,7 @@
             </h1>
             <span id="admin-badge" class="bg-red-900/60 text-red-300 border border-red-500/30 text-[10px] font-extrabold px-2 py-0.5 rounded uppercase hidden">ADMIN</span>
           </div>
-          <p class="text-xs text-gray-400 font-medium">Acervo Digital de Rock & Player de CDs</p>
+          <p class="text-xs text-gray-400 font-medium">Acervo Digital de Rock & Tocador de CDs</p>
         </div>
       </div>
 
@@ -303,7 +303,7 @@
 
   </main>
 
-  <!-- WIDGET PLAYER FIXO NO RODAPÉ (TOCADOR DE CD / RÁDIO) -->
+  <!-- WIDGET PLAYER FIXO NO RODAPÉ (TOCADOR DE CD / ÁUDIO EM SEGUNDO PLANO) -->
   <div id="radio-player-bar" class="fixed bottom-0 left-0 right-0 bg-metal-800/95 backdrop-blur-md border-t border-metal-gold/30 p-3 z-50 transform translate-y-full transition-transform duration-300 shadow-2xl">
     <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
       
@@ -312,25 +312,23 @@
         <img id="player-cover" src="https://placehold.co/100x100/232733/c0c0c0?text=CD" class="w-12 h-12 rounded-lg object-cover border border-metal-700 shadow cd-spin">
         <div class="min-w-0">
           <h4 id="player-track-title" class="text-sm font-bold text-white truncate">Nenhuma faixa selecionada</h4>
-          <p id="player-artist-album" class="text-xs text-metal-gold truncate">Selecione um CD para tocar</p>
+          <p id="player-artist-album" class="text-xs text-metal-gold truncate">Selecione um CD para ouvir</p>
         </div>
       </div>
 
       <!-- Controles de Áudio -->
-      <div class="flex items-center gap-4">
+      <div class="flex items-center gap-6">
         <button onclick="playPrevTrack()" title="Faixa Anterior" class="text-gray-400 hover:text-white transition text-lg"><i class="fa-solid fa-backward-step"></i></button>
-        <button onclick="togglePlayPause()" title="Play / Pause" class="w-10 h-10 rounded-full bg-metal-gold text-metal-900 font-bold flex items-center justify-center hover:scale-105 transition shadow">
+        <button onclick="togglePlayPause()" title="Play / Pause" class="w-12 h-12 rounded-full bg-metal-gold text-metal-900 font-bold flex items-center justify-center hover:scale-105 transition shadow-lg text-lg">
           <i id="play-pause-icon" class="fa-solid fa-play"></i>
         </button>
         <button onclick="playNextTrack()" title="Próxima Faixa" class="text-gray-400 hover:text-white transition text-lg"><i class="fa-solid fa-forward-step"></i></button>
       </div>
 
-      <!-- Visor de Reprodução Integrado do YouTube -->
-      <div class="w-full md:w-64 h-12 rounded-lg overflow-hidden bg-metal-900 border border-metal-700 relative">
-        <div id="youtube-iframe-holder" class="w-full h-full"></div>
-      </div>
+      <!-- Container Oculto para o Áudio do YouTube (Sem exibir vídeo) -->
+      <div id="youtube-iframe-holder" class="hidden"></div>
 
-      <button onclick="closePlayerBar()" title="Fechar Tocador" class="text-gray-500 hover:text-white text-xs p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
+      <button onclick="closePlayerBar()" title="Fechar Tocador" class="text-gray-500 hover:text-white text-xs p-2"><i class="fa-solid fa-xmark text-xl"></i></button>
     </div>
   </div>
 
@@ -506,7 +504,7 @@
     let countryChart = null;
     let targetDeleteId = null;
 
-    // ESTADO E LÓGICA DO PLAYER DE ÁUDIO (OPÇÃO 2)
+    // ESTADO E LÓGICA DO PLAYER DE ÁUDIO OCULTO
     let currentPlaylist = [];
     let currentTrackIndex = 0;
     let currentArtistName = "";
@@ -620,7 +618,7 @@
       const iframeHolder = document.getElementById('youtube-iframe-holder');
       
       iframeHolder.innerHTML = `
-        <iframe width="100%" height="100%" src="https://www.youtube.com/embed?listType=search&list=${query}&autoplay=1" frameborder="0" allow="autoplay; encrypted-media"></iframe>
+        <iframe width="1" height="1" src="https://www.youtube.com/embed?listType=search&list=${query}&autoplay=1" allow="autoplay; encrypted-media"></iframe>
       `;
 
       isPlaying = true;
@@ -636,6 +634,7 @@
         iframeHolder.innerHTML = '';
         isPlaying = false;
         document.getElementById('play-pause-icon').className = "fa-solid fa-play";
+        showToast("Player pausado", "info");
       } else {
         loadAndPlayTrack();
       }
@@ -961,7 +960,7 @@
 
       box.classList.remove('hidden');
       titleEl.textContent = `${track} - ${artist}`;
-      summaryEl.textContent = `A música "${track}" de ${artist} explora temas marcantes de sua discografia.`;
+      summaryEl.textContent = `A faixa "${track}" de ${artist} aborda temas marcantes de sua discografia.`;
       bodyEl.textContent = "Buscando amostra da letra...";
       linkEl.innerHTML = '';
 
