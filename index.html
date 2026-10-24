@@ -533,7 +533,6 @@
     }
 
     function onPlayerStateChange(event) {
-      // Quando a faixa termina (YT.PlayerState.ENDED = 0), toca a próxima faixa automaticamente
       if (event.data === YT.PlayerState.ENDED) {
         playNextTrack();
       }
@@ -595,8 +594,9 @@
       renderCatalog();
     }
 
+    // VERIFICA SE O ÁLBUM É INCOMPLETO (Falta dados ou falta o mapeamento automático de áudio)
     function isIncomplete(cd) {
-      return !cd.country || !cd.year || !cd.cover || !cd.genre || !cd.tracks || cd.tracks.length === 0;
+      return !cd.country || !cd.year || !cd.cover || !cd.genre || !cd.tracks || cd.tracks.length === 0 || !cd.audioMapped;
     }
 
     function showToast(message, type = 'info') {
@@ -642,8 +642,6 @@
       const trackName = currentPlaylist[currentTrackIndex];
       document.getElementById('player-track-title').textContent = `${currentTrackIndex + 1}. ${trackName}`;
 
-      const query = encodeURIComponent(`${currentArtistName} ${trackName} audio`);
-      
       if (ytPlayer && typeof ytPlayer.loadPlaylist === 'function') {
         ytPlayer.loadPlaylist({
           listType: 'search',
@@ -838,7 +836,8 @@
       const newId = 'cd-' + Date.now();
       const newCd = {
         title, artist, genre, year, country, cover,
-        tracks: tracksText ? tracksText.split('\n').map(t => t.trim()).filter(Boolean) : []
+        tracks: tracksText ? tracksText.split('\n').map(t => t.trim()).filter(Boolean) : [],
+        audioMapped: true
       };
 
       try {
@@ -881,7 +880,8 @@
         year: document.getElementById('edit-year').value ? parseInt(document.getElementById('edit-year').value) : null,
         country: document.getElementById('edit-country').value.trim(),
         cover: document.getElementById('edit-cover').value.trim(),
-        tracks: tracksText ? tracksText.split('\n').map(t => t.trim()).filter(Boolean) : []
+        tracks: tracksText ? tracksText.split('\n').map(t => t.trim()).filter(Boolean) : [],
+        audioMapped: true
       };
 
       try {
@@ -1098,7 +1098,10 @@
         artist: album.artistName,
         genre: album.primaryGenreName || 'Rock',
         year: album.releaseDate ? parseInt(album.releaseDate.substring(0, 4)) : null,
-        country: '', cover: cover, tracks: tracks
+        country: '', 
+        cover: cover, 
+        tracks: tracks,
+        audioMapped: true // Marca como áudio pronto na importação automática
       };
 
       try {
