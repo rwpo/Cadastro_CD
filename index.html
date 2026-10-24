@@ -14,6 +14,9 @@
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+  <!-- YouTube IFrame API -->
+  <script src="https://www.youtube.com/iframe_api"></script>
+
   <!-- Firebase SDK (v10.8.0) -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
@@ -303,7 +306,7 @@
 
   </main>
 
-  <!-- WIDGET PLAYER FIXO NO RODAPÉ (TOCADOR DE CD / ÁUDIO EM SEGUNDO PLANO) -->
+  <!-- WIDGET PLAYER FIXO NO RODAPÉ -->
   <div id="radio-player-bar" class="fixed bottom-0 left-0 right-0 bg-metal-800/95 backdrop-blur-md border-t border-metal-gold/30 p-3 z-50 transform translate-y-full transition-transform duration-300 shadow-2xl">
     <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
       
@@ -325,8 +328,10 @@
         <button onclick="playNextTrack()" title="Próxima Faixa" class="text-gray-400 hover:text-white transition text-lg"><i class="fa-solid fa-forward-step"></i></button>
       </div>
 
-      <!-- Container Oculto para o Áudio do YouTube (Sem exibir vídeo) -->
-      <div id="youtube-iframe-holder" class="hidden"></div>
+      <!-- Container do Player Oculto (1px x 1px) -->
+      <div class="w-1 h-1 overflow-hidden opacity-0 pointer-events-none">
+        <div id="yt-player-element"></div>
+      </div>
 
       <button onclick="closePlayerBar()" title="Fechar Tocador" class="text-gray-500 hover:text-white text-xs p-2"><i class="fa-solid fa-xmark text-xl"></i></button>
     </div>
@@ -504,12 +509,35 @@
     let countryChart = null;
     let targetDeleteId = null;
 
-    // ESTADO E LÓGICA DO PLAYER DE ÁUDIO OCULTO
+    // ESTADO E CONTROLADOR DO PLAYER YOUTUBE API
+    let ytPlayer = null;
     let currentPlaylist = [];
     let currentTrackIndex = 0;
     let currentArtistName = "";
     let currentAlbumTitle = "";
     let isPlaying = false;
+
+    // Callback automático carregado pela API do YouTube
+    function onYouTubeIframeAPIReady() {
+      ytPlayer = new YT.Player('yt-player-element', {
+        height: '1',
+        width: '1',
+        playerVars: {
+          'autoplay': 1,
+          'controls': 0
+        },
+        events: {
+          'onStateChange': onPlayerStateChange
+        }
+      });
+    }
+
+    function onPlayerStateChange(event) {
+      // Quando a faixa termina (YT.PlayerState.ENDED = 0), toca a próxima faixa automaticamente
+      if (event.data === YT.PlayerState.ENDED) {
+        playNextTrack();
+      }
+    }
 
     window.addEventListener('load', () => {
       if (sessionStorage.getItem('admin_authenticated') === 'true') {
@@ -615,11 +643,15 @@
       document.getElementById('player-track-title').textContent = `${currentTrackIndex + 1}. ${trackName}`;
 
       const query = encodeURIComponent(`${currentArtistName} ${trackName} audio`);
-      const iframeHolder = document.getElementById('youtube-iframe-holder');
       
-      iframeHolder.innerHTML = `
-        <iframe width="1" height="1" src="https://www.youtube.com/embed?listType=search&list=${query}&autoplay=1" allow="autoplay; encrypted-media"></iframe>
-      `;
+      if (ytPlayer && typeof ytPlayer.loadPlaylist === 'function') {
+        ytPlayer.loadPlaylist({
+          listType: 'search',
+          list: `${currentArtistName} ${trackName} audio`,
+          index: 0,
+          startSeconds: 0
+        });
+      }
 
       isPlaying = true;
       document.getElementById('play-pause-icon').className = "fa-solid fa-pause";
@@ -627,16 +659,17 @@
     }
 
     function togglePlayPause() {
-      if (currentPlaylist.length === 0) return;
-      const iframeHolder = document.getElementById('youtube-iframe-holder');
+      if (currentPlaylist.length === 0 || !ytPlayer) return;
       
       if (isPlaying) {
-        iframeHolder.innerHTML = '';
+        if (typeof ytPlayer.pauseVideo === 'function') ytPlayer.pauseVideo();
         isPlaying = false;
         document.getElementById('play-pause-icon').className = "fa-solid fa-play";
         showToast("Player pausado", "info");
       } else {
-        loadAndPlayTrack();
+        if (typeof ytPlayer.playVideo === 'function') ytPlayer.playVideo();
+        isPlaying = true;
+        document.getElementById('play-pause-icon').className = "fa-solid fa-pause";
       }
     }
 
@@ -654,7 +687,9 @@
 
     function closePlayerBar() {
       document.getElementById('radio-player-bar').classList.add('translate-y-full');
-      document.getElementById('youtube-iframe-holder').innerHTML = '';
+      if (ytPlayer && typeof ytPlayer.stopVideo === 'function') {
+        ytPlayer.stopVideo();
+      }
       isPlaying = false;
     }
 
