@@ -14,9 +14,6 @@
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <!-- YouTube IFrame API -->
-  <script src="https://www.youtube.com/iframe_api"></script>
-
   <!-- Firebase SDK (v10.8.0) -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
@@ -120,7 +117,7 @@
     ::-webkit-scrollbar-thumb:hover { background: #485069; }
   </style>
 </head>
-<body class="bg-metal-900 text-gray-200 antialiased min-h-screen flex flex-col pb-28">
+<body class="bg-metal-900 text-gray-200 antialiased min-h-screen flex flex-col">
 
   <!-- TOP HEADER -->
   <header class="border-b border-metal-700 bg-metal-800/90 sticky top-0 z-40 backdrop-blur-md shadow-lg">
@@ -143,7 +140,7 @@
             </h1>
             <span id="admin-badge" class="bg-red-900/60 text-red-300 border border-red-500/30 text-[10px] font-extrabold px-2 py-0.5 rounded uppercase hidden">ADMIN</span>
           </div>
-          <p class="text-xs text-gray-400 font-medium">Acervo Digital de Rock & Tocador de CDs</p>
+          <p class="text-xs text-gray-400 font-medium">Acervo Digital de Rock</p>
         </div>
       </div>
 
@@ -184,10 +181,10 @@
   </header>
 
   <!-- MAIN CONTAINER -->
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 flex-grow w-full">
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 flex-grow w-full pb-12">
 
     <!-- Toast Notifications -->
-    <div id="toast-container" class="fixed bottom-24 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
     <!-- CATALOG SECTION -->
     <section id="section-catalog" class="space-y-6">
@@ -305,37 +302,6 @@
     </section>
 
   </main>
-
-  <!-- WIDGET PLAYER FIXO NO RODAPÉ -->
-  <div id="radio-player-bar" class="fixed bottom-0 left-0 right-0 bg-metal-800/95 backdrop-blur-md border-t border-metal-gold/30 p-3 z-50 transform translate-y-full transition-transform duration-300 shadow-2xl">
-    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
-      
-      <!-- Miniatura e Detalhes da Faixa -->
-      <div class="flex items-center gap-3 w-full md:w-auto">
-        <img id="player-cover" src="https://placehold.co/100x100/232733/c0c0c0?text=CD" class="w-12 h-12 rounded-lg object-cover border border-metal-700 shadow cd-spin">
-        <div class="min-w-0">
-          <h4 id="player-track-title" class="text-sm font-bold text-white truncate">Nenhuma faixa selecionada</h4>
-          <p id="player-artist-album" class="text-xs text-metal-gold truncate">Selecione um CD para ouvir</p>
-        </div>
-      </div>
-
-      <!-- Controles de Áudio -->
-      <div class="flex items-center gap-6">
-        <button onclick="playPrevTrack()" title="Faixa Anterior" class="text-gray-400 hover:text-white transition text-lg"><i class="fa-solid fa-backward-step"></i></button>
-        <button onclick="togglePlayPause()" title="Play / Pause" class="w-12 h-12 rounded-full bg-metal-gold text-metal-900 font-bold flex items-center justify-center hover:scale-105 transition shadow-lg text-lg">
-          <i id="play-pause-icon" class="fa-solid fa-play"></i>
-        </button>
-        <button onclick="playNextTrack()" title="Próxima Faixa" class="text-gray-400 hover:text-white transition text-lg"><i class="fa-solid fa-forward-step"></i></button>
-      </div>
-
-      <!-- Container do Player Oculto (1px x 1px) -->
-      <div class="w-1 h-1 overflow-hidden opacity-0 pointer-events-none">
-        <div id="yt-player-element"></div>
-      </div>
-
-      <button onclick="closePlayerBar()" title="Fechar Tocador" class="text-gray-500 hover:text-white text-xs p-2"><i class="fa-solid fa-xmark text-xl"></i></button>
-    </div>
-  </div>
 
   <!-- MODALS -->
 
@@ -509,35 +475,6 @@
     let countryChart = null;
     let targetDeleteId = null;
 
-    // ESTADO E CONTROLADOR DO PLAYER YOUTUBE API
-    let ytPlayer = null;
-    let currentPlaylist = [];
-    let currentTrackIndex = 0;
-    let currentArtistName = "";
-    let currentAlbumTitle = "";
-    let isPlaying = false;
-
-    // Callback automático carregado pela API do YouTube
-    function onYouTubeIframeAPIReady() {
-      ytPlayer = new YT.Player('yt-player-element', {
-        height: '1',
-        width: '1',
-        playerVars: {
-          'autoplay': 1,
-          'controls': 0
-        },
-        events: {
-          'onStateChange': onPlayerStateChange
-        }
-      });
-    }
-
-    function onPlayerStateChange(event) {
-      if (event.data === YT.PlayerState.ENDED) {
-        playNextTrack();
-      }
-    }
-
     window.addEventListener('load', () => {
       if (sessionStorage.getItem('admin_authenticated') === 'true') {
         setAdminState(true);
@@ -594,9 +531,8 @@
       renderCatalog();
     }
 
-    // VERIFICA SE O ÁLBUM É INCOMPLETO (Falta dados ou falta o mapeamento automático de áudio)
     function isIncomplete(cd) {
-      return !cd.country || !cd.year || !cd.cover || !cd.genre || !cd.tracks || cd.tracks.length === 0 || !cd.audioMapped;
+      return !cd.country || !cd.year || !cd.cover || !cd.genre || !cd.tracks || cd.tracks.length === 0;
     }
 
     function showToast(message, type = 'info') {
@@ -616,79 +552,6 @@
 
       setTimeout(() => toast.classList.remove('translate-y-2', 'opacity-0'), 10);
       setTimeout(() => { toast.classList.add('opacity-0', 'translate-y-2'); setTimeout(() => toast.remove(), 300); }, 3000);
-    }
-
-    // LÓGICA DO PLAYER / RÁDIO
-    function playAlbum(cdId, startTrackIdx = 0) {
-      const cd = window.cdCatalog.find(item => item.id === cdId);
-      if (!cd || !cd.tracks || cd.tracks.length === 0) {
-        showToast("Este CD não possui faixas cadastradas para tocar.", "error");
-        return;
-      }
-
-      currentPlaylist = cd.tracks;
-      currentTrackIndex = startTrackIdx;
-      currentArtistName = cd.artist;
-      currentAlbumTitle = cd.title;
-
-      document.getElementById('player-cover').src = cd.cover || 'https://placehold.co/100x100/232733/c0c0c0?text=CD';
-      document.getElementById('player-artist-album').textContent = `${cd.artist} • ${cd.title}`;
-
-      document.getElementById('radio-player-bar').classList.remove('translate-y-full');
-      loadAndPlayTrack();
-    }
-
-    function loadAndPlayTrack() {
-      const trackName = currentPlaylist[currentTrackIndex];
-      document.getElementById('player-track-title').textContent = `${currentTrackIndex + 1}. ${trackName}`;
-
-      if (ytPlayer && typeof ytPlayer.loadPlaylist === 'function') {
-        ytPlayer.loadPlaylist({
-          listType: 'search',
-          list: `${currentArtistName} ${trackName} audio`,
-          index: 0,
-          startSeconds: 0
-        });
-      }
-
-      isPlaying = true;
-      document.getElementById('play-pause-icon').className = "fa-solid fa-pause";
-      showToast(`Tocando: ${trackName}`, "info");
-    }
-
-    function togglePlayPause() {
-      if (currentPlaylist.length === 0 || !ytPlayer) return;
-      
-      if (isPlaying) {
-        if (typeof ytPlayer.pauseVideo === 'function') ytPlayer.pauseVideo();
-        isPlaying = false;
-        document.getElementById('play-pause-icon').className = "fa-solid fa-play";
-        showToast("Player pausado", "info");
-      } else {
-        if (typeof ytPlayer.playVideo === 'function') ytPlayer.playVideo();
-        isPlaying = true;
-        document.getElementById('play-pause-icon').className = "fa-solid fa-pause";
-      }
-    }
-
-    function playNextTrack() {
-      if (currentPlaylist.length === 0) return;
-      currentTrackIndex = (currentTrackIndex + 1) % currentPlaylist.length;
-      loadAndPlayTrack();
-    }
-
-    function playPrevTrack() {
-      if (currentPlaylist.length === 0) return;
-      currentTrackIndex = (currentTrackIndex - 1 + currentPlaylist.length) % currentPlaylist.length;
-      loadAndPlayTrack();
-    }
-
-    function closePlayerBar() {
-      document.getElementById('radio-player-bar').classList.add('translate-y-full');
-      if (ytPlayer && typeof ytPlayer.stopVideo === 'function') {
-        ytPlayer.stopVideo();
-      }
-      isPlaying = false;
     }
 
     // RENDERIZAÇÃO DA COLEÇÃO
@@ -751,16 +614,12 @@
                   <p class="text-xs text-gray-500">${cd.year || 'Ano N/A'}</p>
                 </div>
 
-                <div class="flex items-center gap-2 pt-2 border-t border-metal-700/50">
-                  <button onclick="playAlbum('${cd.id}')" class="flex-grow py-1.5 rounded-lg bg-gradient-to-r from-metal-gold to-yellow-600 text-metal-900 font-extrabold text-xs shadow hover:scale-105 transition flex items-center justify-center gap-1.5">
-                    <i class="fa-solid fa-play text-[10px]"></i> Tocar Álbum
-                  </button>
-
-                  ${isAdmin ? `
-                    <button onclick="openEditModal('${cd.id}')" title="Editar" class="p-1.5 rounded-lg bg-metal-700 hover:bg-metal-600 text-gray-300 text-xs transition"><i class="fa-solid fa-pen"></i></button>
-                    <button onclick="confirmRemoveCd('${cd.id}')" title="Excluir" class="p-1.5 rounded-lg bg-red-900/40 border border-red-500/30 hover:bg-red-800 text-red-200 text-xs transition"><i class="fa-solid fa-trash"></i></button>
-                  ` : ''}
-                </div>
+                ${isAdmin ? `
+                  <div class="flex items-center gap-2 pt-2 border-t border-metal-700/50">
+                    <button onclick="openEditModal('${cd.id}')" title="Editar" class="flex-1 py-1.5 rounded-lg bg-metal-700 hover:bg-metal-600 text-gray-300 text-xs font-semibold transition"><i class="fa-solid fa-pen mr-1"></i> Editar</button>
+                    <button onclick="confirmRemoveCd('${cd.id}')" title="Excluir" class="p-1.5 px-3 rounded-lg bg-red-900/40 border border-red-500/30 hover:bg-red-800 text-red-200 text-xs transition"><i class="fa-solid fa-trash"></i></button>
+                  </div>
+                ` : ''}
               </div>
             </div>
           `;
@@ -783,15 +642,12 @@
                 </div>
               </div>
 
-              <div class="flex items-center gap-2 flex-shrink-0">
-                <button onclick="playAlbum('${cd.id}')" class="px-3 py-1.5 rounded-lg bg-metal-gold text-metal-900 font-extrabold text-xs shadow hover:scale-105 transition flex items-center gap-1">
-                  <i class="fa-solid fa-play text-[10px]"></i> Tocar
-                </button>
-                ${isAdmin ? `
+              ${isAdmin ? `
+                <div class="flex items-center gap-2 flex-shrink-0">
                   <button onclick="openEditModal('${cd.id}')" class="p-2 rounded-lg bg-metal-700 hover:bg-metal-600 text-gray-200 text-xs transition"><i class="fa-solid fa-pen"></i></button>
                   <button onclick="confirmRemoveCd('${cd.id}')" class="p-2 rounded-lg bg-red-900/40 border border-red-500/30 hover:bg-red-800 text-red-200 text-xs transition"><i class="fa-solid fa-trash"></i></button>
-                ` : ''}
-              </div>
+                </div>
+              ` : ''}
             </div>
           `;
         }).join('');
@@ -836,8 +692,7 @@
       const newId = 'cd-' + Date.now();
       const newCd = {
         title, artist, genre, year, country, cover,
-        tracks: tracksText ? tracksText.split('\n').map(t => t.trim()).filter(Boolean) : [],
-        audioMapped: true
+        tracks: tracksText ? tracksText.split('\n').map(t => t.trim()).filter(Boolean) : []
       };
 
       try {
@@ -880,8 +735,7 @@
         year: document.getElementById('edit-year').value ? parseInt(document.getElementById('edit-year').value) : null,
         country: document.getElementById('edit-country').value.trim(),
         cover: document.getElementById('edit-cover').value.trim(),
-        tracks: tracksText ? tracksText.split('\n').map(t => t.trim()).filter(Boolean) : [],
-        audioMapped: true
+        tracks: tracksText ? tracksText.split('\n').map(t => t.trim()).filter(Boolean) : []
       };
 
       try {
@@ -937,15 +791,12 @@
               <span><i class="fa-solid fa-music mr-1"></i> ${cd.tracks ? cd.tracks.length : 0} faixas</span>
             </div>
             
-            <div class="pt-4 flex gap-2">
-              <button onclick="playAlbum('${cd.id}')" class="px-4 py-2 rounded-xl bg-metal-gold text-metal-900 font-extrabold text-xs shadow hover:scale-105 transition flex items-center gap-1.5">
-                <i class="fa-solid fa-play"></i> Tocar Álbum
-              </button>
-              ${isAdmin ? `
+            ${isAdmin ? `
+              <div class="pt-4 flex gap-2">
                 <button onclick="openEditModal('${cd.id}')" class="px-3 py-2 rounded-xl bg-metal-700 hover:bg-metal-600 text-xs font-semibold text-white"><i class="fa-solid fa-pen mr-1"></i> Editar</button>
                 <button onclick="confirmRemoveCd('${cd.id}')" class="px-3 py-2 rounded-xl bg-red-900/40 hover:bg-red-800 text-xs font-semibold text-red-200 border border-red-500/30"><i class="fa-solid fa-trash mr-1"></i> Excluir</button>
-              ` : ''}
-            </div>
+              </div>
+            ` : ''}
           </div>
         </div>
 
@@ -958,14 +809,9 @@
               ${cd.tracks.map((track, idx) => `
                 <li class="p-2.5 rounded-xl bg-metal-900/60 border border-metal-800 flex justify-between items-center group">
                   <span class="text-gray-300 font-medium">${idx + 1}. ${track}</span>
-                  <div class="flex items-center gap-3">
-                    <button onclick="playAlbum('${cd.id}', ${idx})" class="text-xs text-metal-gold opacity-80 group-hover:opacity-100 hover:underline flex items-center gap-1">
-                      <i class="fa-solid fa-play text-[10px]"></i> Tocar
-                    </button>
-                    <button onclick="fetchLyrics('${cd.artist.replace(/'/g, "\\'")}', '${track.replace(/'/g, "\\'")}')" class="text-xs text-gray-400 hover:text-white">
-                      <i class="fa-solid fa-align-left"></i> Letra
-                    </button>
-                  </div>
+                  <button onclick="fetchLyrics('${cd.artist.replace(/'/g, "\\'")}', '${track.replace(/'/g, "\\'")}')" class="text-xs text-gray-400 hover:text-white flex items-center gap-1">
+                    <i class="fa-solid fa-align-left"></i> Letra
+                  </button>
                 </li>
               `).join('')}
             </ul>
@@ -1100,8 +946,7 @@
         year: album.releaseDate ? parseInt(album.releaseDate.substring(0, 4)) : null,
         country: '', 
         cover: cover, 
-        tracks: tracks,
-        audioMapped: true // Marca como áudio pronto na importação automática
+        tracks: tracks
       };
 
       try {
