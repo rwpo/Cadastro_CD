@@ -187,7 +187,7 @@
     <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
     <!-- CATALOG SECTION -->
-    <section id="section-catalog" class="space-y-6">
+    <section id="section-catalog" class="space-y-4">
       
       <!-- Toolbar -->
       <div class="glass-card p-4 rounded-2xl flex flex-col lg:flex-row gap-4 items-center justify-between">
@@ -231,6 +231,9 @@
           </div>
         </div>
       </div>
+
+      <!-- Result Count Feedback -->
+      <div id="search-result-count" class="text-xs font-bold text-gray-400 px-2 flex items-center justify-between"></div>
 
       <!-- Catalog Container -->
       <div id="catalog-container"></div>
@@ -281,15 +284,31 @@
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Chart & Table for Genres -->
         <div class="glass-card p-6 rounded-2xl space-y-4">
           <h3 class="text-lg font-bold text-gray-100 flex items-center gap-2">
             <i class="fa-solid fa-chart-pie text-metal-gold"></i> Distribuição por Gênero
           </h3>
-          <div class="relative h-64 w-full flex items-center justify-center">
-            <canvas id="chart-genres"></canvas>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+            <div class="relative h-56 w-full flex items-center justify-center">
+              <canvas id="chart-genres"></canvas>
+            </div>
+            <div class="max-h-56 overflow-y-auto pr-1">
+              <table class="w-full text-xs text-left text-gray-300">
+                <thead class="text-[10px] uppercase bg-metal-900/80 text-gray-400 border-b border-metal-700">
+                  <tr>
+                    <th class="py-2 px-2">Gênero</th>
+                    <th class="py-2 px-2 text-center">CDs</th>
+                    <th class="py-2 px-2 text-right">%</th>
+                  </tr>
+                </thead>
+                <tbody id="table-genres-body" class="divide-y divide-metal-800"></tbody>
+              </table>
+            </div>
           </div>
         </div>
 
+        <!-- Country Chart -->
         <div class="glass-card p-6 rounded-2xl space-y-4">
           <h3 class="text-lg font-bold text-gray-100 flex items-center gap-2">
             <i class="fa-solid fa-flag text-red-400"></i> Álbuns por País de Origem
@@ -521,7 +540,7 @@
 
       if (inputPass === ADMIN_PASSWORD) {
         sessionStorage.setItem('admin_authenticated', 'true');
-        errorMsg.classList.remove('hidden');
+        errorMsg.classList.add('hidden');
         setAdminState(true);
         closeModal('login-modal');
         document.getElementById('admin-password-input').value = '';
@@ -576,9 +595,10 @@
       setTimeout(() => { toast.classList.add('opacity-0', 'translate-y-2'); setTimeout(() => toast.remove(), 300); }, 3000);
     }
 
-    // RENDERIZAÇÃO DA COLEÇÃO
+    // RENDERIZAÇÃO DA COLEÇÃO COM CONTADOR DE RESULTADOS
     window.renderCatalog = function() {
       const container = document.getElementById('catalog-container');
+      const resultCountEl = document.getElementById('search-result-count');
       const searchQuery = document.getElementById('filter-search').value.toLowerCase().trim();
       const genreQuery = document.getElementById('filter-genre').value;
       const countryQuery = document.getElementById('filter-country').value;
@@ -602,11 +622,20 @@
         return 0;
       });
 
+      // Atualiza o contador de resultados
+      if (searchQuery || genreQuery || countryQuery || incompleteOnly) {
+        const queryText = searchQuery ? ` para "${searchQuery}"` : '';
+        resultCountEl.innerHTML = `<span><i class="fa-solid fa-filter text-metal-gold mr-1.5"></i>Exibindo <strong>${filtered.length}</strong> ${filtered.length === 1 ? 'resultado' : 'resultados'}${queryText}</span><span>Total na coleção: ${window.cdCatalog.length}</span>`;
+      } else {
+        resultCountEl.innerHTML = `<span>Exibindo todos os <strong>${filtered.length}</strong> CDs do acervo</span>`;
+      }
+
       if (filtered.length === 0) {
         container.innerHTML = `
           <div class="glass-card p-12 rounded-2xl text-center space-y-4">
             <i class="fa-solid fa-compact-disc text-5xl text-gray-600"></i>
             <h3 class="text-xl font-bold text-gray-300">Nenhum CD encontrado</h3>
+            <p class="text-xs text-gray-500">Tente buscar por outro termo ou ajuste os filtros.</p>
           </div>
         `;
         return;
@@ -932,7 +961,6 @@
         const isDuplicate = window.cdCatalog.some(item => item.title.toLowerCase() === album.collectionName.toLowerCase() && item.artist.toLowerCase() === album.artistName.toLowerCase());
         const artwork = album.artworkUrl100 ? album.artworkUrl100.replace('100x100bb', '600x600bb') : 'https://placehold.co/100x100/232733/c0c0c0?text=Sem+Capa';
 
-        // Estima o tipo de álbum pelo número de faixas ou título
         let detectedFormat = "Simples";
         if (album.trackCount > 25 || (album.collectionName && album.collectionName.toLowerCase().includes('triple'))) {
           detectedFormat = "Triplo";
@@ -981,7 +1009,6 @@
         tracks = data.results.filter(item => item.wrapperType === 'track').map(item => item.trackName);
       }
 
-      // Detecta formato automático para salvar
       let detectedFormat = "Simples";
       if (tracks.length > 25 || (album.collectionName && album.collectionName.toLowerCase().includes('triple'))) {
         detectedFormat = "Triplo";
@@ -1059,8 +1086,8 @@
 
       genreChart = new Chart(genreCtx, {
         type: 'doughnut',
-        data: { labels: [], datasets: [{ data: [], backgroundColor: ['#e63946', '#d4af37', '#3a86ff', '#8338ec', '#fb5607', '#06d6a0'] }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#cbd5e1', font: { family: 'Inter', size: 11 } } } } }
+        data: { labels: [], datasets: [{ data: [], backgroundColor: ['#e63946', '#d4af37', '#3a86ff', '#8338ec', '#fb5607', '#06d6a0', '#118ab2', '#073b4c'] }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
       });
 
       countryChart = new Chart(countryCtx, {
@@ -1073,18 +1100,45 @@
     }
 
     window.updateStatistics = function() {
-      document.getElementById('stat-total-cds').textContent = window.cdCatalog.length;
+      const totalCds = window.cdCatalog.length;
+      document.getElementById('stat-total-cds').textContent = totalCds;
       document.getElementById('stat-total-artists').textContent = new Set(window.cdCatalog.map(c => c.artist).filter(Boolean)).size;
       document.getElementById('stat-total-countries').textContent = new Set(window.cdCatalog.map(c => c.country).filter(Boolean)).size;
       document.getElementById('stat-total-genres').textContent = new Set(window.cdCatalog.map(c => c.genre).filter(Boolean)).size;
 
       const genreCounts = {};
       window.cdCatalog.forEach(cd => { const g = cd.genre || 'Outros'; genreCounts[g] = (genreCounts[g] || 0) + 1; });
-      if (genreChart) { genreChart.data.labels = Object.keys(genreCounts); genreChart.data.datasets[0].data = Object.values(genreCounts); genreChart.update(); }
+      
+      // Atualiza o Gráfico de Gêneros
+      if (genreChart) { 
+        genreChart.data.labels = Object.keys(genreCounts); 
+        genreChart.data.datasets[0].data = Object.values(genreCounts); 
+        genreChart.update(); 
+      }
+
+      // Preenche a Tabela de Distribuição por Gênero
+      const tableBody = document.getElementById('table-genres-body');
+      if (tableBody) {
+        const sortedGenres = Object.entries(genreCounts).sort((a, b) => b[1] - a[1]);
+        tableBody.innerHTML = sortedGenres.map(([genre, count]) => {
+          const pct = totalCds > 0 ? ((count / totalCds) * 100).toFixed(1) : '0.0';
+          return `
+            <tr>
+              <td class="py-1.5 px-2 font-medium text-white">${genre}</td>
+              <td class="py-1.5 px-2 text-center text-metal-gold font-bold">${count}</td>
+              <td class="py-1.5 px-2 text-right text-gray-400">${pct}%</td>
+            </tr>
+          `;
+        }).join('');
+      }
 
       const countryCounts = {};
       window.cdCatalog.forEach(cd => { const c = cd.country || 'Não Informado'; countryCounts[c] = (countryCounts[c] || 0) + 1; });
-      if (countryChart) { countryChart.data.labels = Object.keys(countryCounts); countryChart.data.datasets[0].data = Object.values(countryCounts); countryChart.update(); }
+      if (countryChart) { 
+        countryChart.data.labels = Object.keys(countryCounts); 
+        countryChart.data.datasets[0].data = Object.values(countryCounts); 
+        countryChart.update(); 
+      }
     };
 
     function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
