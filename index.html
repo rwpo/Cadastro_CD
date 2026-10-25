@@ -351,13 +351,24 @@
             <input type="text" id="add-genre" placeholder="ex: Heavy Metal" required class="w-full bg-metal-900 border border-metal-700 rounded-xl p-2.5 text-sm focus:border-metal-gold outline-none text-white">
           </div>
           <div>
+            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Tipo de Álbum</label>
+            <select id="add-format" class="w-full bg-metal-900 border border-metal-700 rounded-xl p-2.5 text-sm focus:border-metal-gold outline-none text-white">
+              <option value="Simples">Simples</option>
+              <option value="Duplo">Duplo</option>
+              <option value="Triplo">Triplo</option>
+              <option value="Outros">Outros</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
             <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Ano de Lançamento</label>
             <input type="number" id="add-year" placeholder="ex: 1986" class="w-full bg-metal-900 border border-metal-700 rounded-xl p-2.5 text-sm focus:border-metal-gold outline-none text-white">
           </div>
-        </div>
-        <div>
-          <label class="block text-xs font-bold text-gray-400 uppercase mb-1">País de Origem da Banda</label>
-          <input type="text" id="add-country" placeholder="ex: Reino Unido, Brasil, EUA" class="w-full bg-metal-900 border border-metal-700 rounded-xl p-2.5 text-sm focus:border-metal-gold outline-none text-white">
+          <div>
+            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">País de Origem da Banda</label>
+            <input type="text" id="add-country" placeholder="ex: Reino Unido, Brasil, EUA" class="w-full bg-metal-900 border border-metal-700 rounded-xl p-2.5 text-sm focus:border-metal-gold outline-none text-white">
+          </div>
         </div>
         <div>
           <label class="block text-xs font-bold text-gray-400 uppercase mb-1">URL da Capa</label>
@@ -398,13 +409,24 @@
             <input type="text" id="edit-genre" required class="w-full bg-metal-900 border border-metal-700 rounded-xl p-2.5 text-sm focus:border-metal-gold outline-none text-white">
           </div>
           <div>
+            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Tipo de Álbum</label>
+            <select id="edit-format" class="w-full bg-metal-900 border border-metal-700 rounded-xl p-2.5 text-sm focus:border-metal-gold outline-none text-white">
+              <option value="Simples">Simples</option>
+              <option value="Duplo">Duplo</option>
+              <option value="Triplo">Triplo</option>
+              <option value="Outros">Outros</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
             <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Ano</label>
             <input type="number" id="edit-year" class="w-full bg-metal-900 border border-metal-700 rounded-xl p-2.5 text-sm focus:border-metal-gold outline-none text-white">
           </div>
-        </div>
-        <div>
-          <label class="block text-xs font-bold text-gray-400 uppercase mb-1">País de Origem</label>
-          <input type="text" id="edit-country" class="w-full bg-metal-900 border border-metal-700 rounded-xl p-2.5 text-sm focus:border-metal-gold outline-none text-white">
+          <div>
+            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">País de Origem</label>
+            <input type="text" id="edit-country" class="w-full bg-metal-900 border border-metal-700 rounded-xl p-2.5 text-sm focus:border-metal-gold outline-none text-white">
+          </div>
         </div>
         <div>
           <label class="block text-xs font-bold text-gray-400 uppercase mb-1">URL da Capa</label>
@@ -499,7 +521,7 @@
 
       if (inputPass === ADMIN_PASSWORD) {
         sessionStorage.setItem('admin_authenticated', 'true');
-        errorMsg.classList.add('hidden');
+        errorMsg.classList.remove('hidden');
         setAdminState(true);
         closeModal('login-modal');
         document.getElementById('admin-password-input').value = '';
@@ -594,6 +616,9 @@
         container.className = "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6";
         container.innerHTML = filtered.map(cd => {
           const incomplete = isIncomplete(cd);
+          const trackCount = cd.tracks ? cd.tracks.length : 0;
+          const formatText = cd.format || 'Simples';
+
           return `
             <div class="glass-card rounded-2xl overflow-hidden hover:border-metal-gold/40 transition-all duration-300 flex flex-col group relative">
               <div class="relative aspect-square w-full bg-metal-900 overflow-hidden cursor-pointer" onclick="openDetailsModal('${cd.id}')">
@@ -611,7 +636,9 @@
                   <span class="text-[10px] font-bold uppercase tracking-wider text-metal-gold bg-metal-900/60 px-2 py-0.5 rounded border border-metal-700/50">${cd.genre || 'Desconhecido'}</span>
                   <h3 class="text-base font-bold text-white leading-snug line-clamp-1 mt-1">${cd.title}</h3>
                   <p class="text-sm font-medium text-gray-400 line-clamp-1">${cd.artist}</p>
-                  <p class="text-xs text-gray-500">${cd.year || 'Ano N/A'}</p>
+                  <p class="text-xs text-gray-500 font-medium mt-1">
+                    ${cd.year || 'Ano N/A'} • <span class="text-gray-300 font-semibold">${formatText}</span> • ${trackCount} faixas
+                  </p>
                 </div>
 
                 ${isAdmin ? `
@@ -628,6 +655,9 @@
         container.className = "space-y-3";
         container.innerHTML = filtered.map(cd => {
           const incomplete = isIncomplete(cd);
+          const trackCount = cd.tracks ? cd.tracks.length : 0;
+          const formatText = cd.format || 'Simples';
+
           return `
             <div class="glass-card p-4 rounded-xl flex items-center justify-between gap-4 hover:border-metal-gold/30 transition">
               <div class="flex items-center gap-4 cursor-pointer flex-grow min-w-0" onclick="openDetailsModal('${cd.id}')">
@@ -638,7 +668,9 @@
                     ${incomplete && isAdmin ? `<span class="bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[10px] px-1.5 py-0.5 rounded font-bold">Incompleto</span>` : ''}
                   </div>
                   <p class="text-xs text-gray-400 truncate">${cd.artist} • <span class="text-metal-gold">${cd.genre || 'Gênero N/A'}</span></p>
-                  <p class="text-[11px] text-gray-500">${cd.year ? cd.year + ' • ' : ''}${cd.country || 'País N/A'}</p>
+                  <p class="text-[11px] text-gray-500">
+                    ${cd.year ? cd.year + ' • ' : ''}<span class="text-gray-300 font-semibold">${formatText}</span> • ${trackCount} faixas ${cd.country ? '• ' + cd.country : ''}
+                  </p>
                 </div>
               </div>
 
@@ -684,6 +716,7 @@
       const title = document.getElementById('add-title').value.trim();
       const artist = document.getElementById('add-artist').value.trim();
       const genre = document.getElementById('add-genre').value.trim();
+      const format = document.getElementById('add-format').value;
       const year = document.getElementById('add-year').value ? parseInt(document.getElementById('add-year').value) : null;
       const country = document.getElementById('add-country').value.trim();
       const cover = document.getElementById('add-cover').value.trim();
@@ -691,7 +724,7 @@
 
       const newId = 'cd-' + Date.now();
       const newCd = {
-        title, artist, genre, year, country, cover,
+        title, artist, genre, format, year, country, cover,
         tracks: tracksText ? tracksText.split('\n').map(t => t.trim()).filter(Boolean) : []
       };
 
@@ -715,6 +748,7 @@
       document.getElementById('edit-title').value = cd.title || '';
       document.getElementById('edit-artist').value = cd.artist || '';
       document.getElementById('edit-genre').value = cd.genre || '';
+      document.getElementById('edit-format').value = cd.format || 'Simples';
       document.getElementById('edit-year').value = cd.year || '';
       document.getElementById('edit-country').value = cd.country || '';
       document.getElementById('edit-cover').value = cd.cover || '';
@@ -732,6 +766,7 @@
         title: document.getElementById('edit-title').value.trim(),
         artist: document.getElementById('edit-artist').value.trim(),
         genre: document.getElementById('edit-genre').value.trim(),
+        format: document.getElementById('edit-format').value,
         year: document.getElementById('edit-year').value ? parseInt(document.getElementById('edit-year').value) : null,
         country: document.getElementById('edit-country').value.trim(),
         cover: document.getElementById('edit-cover').value.trim(),
@@ -787,6 +822,7 @@
             <p class="text-lg font-semibold text-gray-300">${cd.artist}</p>
             <div class="flex flex-wrap gap-4 text-xs text-gray-400 pt-2">
               <span><i class="fa-solid fa-calendar mr-1"></i> ${cd.year || 'N/A'}</span>
+              <span><i class="fa-solid fa-compact-disc text-metal-gold mr-1"></i> ${cd.format || 'Simples'}</span>
               <span><i class="fa-solid fa-flag text-red-400 mr-1"></i> ${cd.country || 'N/A'}</span>
               <span><i class="fa-solid fa-music mr-1"></i> ${cd.tracks ? cd.tracks.length : 0} faixas</span>
             </div>
@@ -896,6 +932,14 @@
         const isDuplicate = window.cdCatalog.some(item => item.title.toLowerCase() === album.collectionName.toLowerCase() && item.artist.toLowerCase() === album.artistName.toLowerCase());
         const artwork = album.artworkUrl100 ? album.artworkUrl100.replace('100x100bb', '600x600bb') : 'https://placehold.co/100x100/232733/c0c0c0?text=Sem+Capa';
 
+        // Estima o tipo de álbum pelo número de faixas ou título
+        let detectedFormat = "Simples";
+        if (album.trackCount > 25 || (album.collectionName && album.collectionName.toLowerCase().includes('triple'))) {
+          detectedFormat = "Triplo";
+        } else if (album.trackCount > 15 || (album.collectionName && (album.collectionName.toLowerCase().includes('double') || album.collectionName.toLowerCase().includes('duplo')))) {
+          detectedFormat = "Duplo";
+        }
+
         return `
           <div class="p-3 rounded-xl bg-metal-900 border border-metal-700 flex items-center justify-between gap-4">
             <div class="flex items-center gap-3 min-w-0">
@@ -903,7 +947,7 @@
               <div class="min-w-0">
                 <h4 class="text-sm font-bold text-white truncate">${album.collectionName}</h4>
                 <p class="text-xs text-gray-400 truncate">${album.artistName} • ${album.primaryGenreName}</p>
-                <p class="text-[10px] text-gray-500">${album.releaseDate ? album.releaseDate.substring(0, 4) : 'N/A'}</p>
+                <p class="text-[10px] text-gray-500">${album.releaseDate ? album.releaseDate.substring(0, 4) : 'N/A'} • <span class="text-gray-300 font-medium">${detectedFormat}</span> (${album.trackCount || 0} faixas)</p>
               </div>
             </div>
             ${isDuplicate ? `<span class="px-3 py-1.5 rounded-lg bg-metal-800 text-xs font-semibold text-gray-500 border border-metal-700 flex-shrink-0"><i class="fa-solid fa-check mr-1"></i> Já na Coleção</span>` : `<button onclick="addFromOnline(${idx})" class="px-3 py-1.5 rounded-lg bg-metal-gold hover:bg-yellow-400 text-metal-900 text-xs font-bold flex-shrink-0 shadow transition"><i class="fa-solid fa-plus mr-1"></i> Importar</button>`}
@@ -937,12 +981,21 @@
         tracks = data.results.filter(item => item.wrapperType === 'track').map(item => item.trackName);
       }
 
+      // Detecta formato automático para salvar
+      let detectedFormat = "Simples";
+      if (tracks.length > 25 || (album.collectionName && album.collectionName.toLowerCase().includes('triple'))) {
+        detectedFormat = "Triplo";
+      } else if (tracks.length > 15 || (album.collectionName && (album.collectionName.toLowerCase().includes('double') || album.collectionName.toLowerCase().includes('duplo')))) {
+        detectedFormat = "Duplo";
+      }
+
       const cover = album.artworkUrl100 ? album.artworkUrl100.replace('100x100bb', '600x600bb') : '';
       const newId = 'cd-' + Date.now();
       const newCd = {
         title: album.collectionName,
         artist: album.artistName,
         genre: album.primaryGenreName || 'Rock',
+        format: detectedFormat,
         year: album.releaseDate ? parseInt(album.releaseDate.substring(0, 4)) : null,
         country: '', 
         cover: cover, 
