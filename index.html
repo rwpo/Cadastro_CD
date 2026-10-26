@@ -44,10 +44,10 @@
     window.firebaseMethods = { setDoc, deleteDoc, doc, collection };
     window.unsubscribeCurrent = null;
 
-    // Função para carregar a coleção dinâmica com base no usuário logado
+    // Função para carregar a coleção dinâmica com base no usuário visualizado/logado
     window.initUserSession = function() {
-      const currentUser = sessionStorage.getItem('current_user') || 'ricardo';
-      const collectionName = currentUser === 'larissa' ? 'cds_larissa' : 'cds';
+      const activeUser = sessionStorage.getItem('view_user') || sessionStorage.getItem('current_user') || 'ricardo';
+      const collectionName = activeUser === 'larissa' ? 'cds_larissa' : 'cds';
       const cdsCollection = collection(db, collectionName);
 
       // Cancela listener anterior se houver
@@ -74,6 +74,7 @@
       if (sessionStorage.getItem('admin_authenticated') === 'true') {
         setAdminState(true);
       }
+      updateUserSubtitle();
     });
   </script>
 
@@ -161,15 +162,26 @@
           </div>
         </div>
 
-        <!-- Navigation Tabs -->
-        <nav class="flex items-center gap-2 bg-metal-900/80 p-1.5 rounded-xl border border-metal-700">
-          <button id="tab-catalog-btn" onclick="switchTab('catalog')" class="px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 bg-metal-700 text-white shadow">
-            <i class="fa-solid fa-record-vinyl mr-2 text-metal-gold"></i>Coleção
-          </button>
-          <button id="tab-stats-btn" onclick="switchTab('stats')" class="px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 text-gray-400 hover:text-white">
-            <i class="fa-solid fa-chart-pie mr-2 text-metal-accent"></i>Estatísticas
-          </button>
-        </nav>
+        <!-- Navigation Tabs & Quick User Switcher -->
+        <div class="flex flex-wrap items-center gap-3">
+          <nav class="flex items-center gap-2 bg-metal-900/80 p-1.5 rounded-xl border border-metal-700">
+            <button id="tab-catalog-btn" onclick="switchTab('catalog')" class="px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 bg-metal-700 text-white shadow">
+              <i class="fa-solid fa-record-vinyl mr-2 text-metal-gold"></i>Coleção
+            </button>
+            <button id="tab-stats-btn" onclick="switchTab('stats')" class="px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 text-gray-400 hover:text-white">
+              <i class="fa-solid fa-chart-pie mr-2 text-metal-accent"></i>Estatísticas
+            </button>
+          </nav>
+
+          <!-- Seletor Rápido de Acervo (Visível para Visitantes e Admins) -->
+          <div class="flex items-center gap-1.5 bg-metal-900 border border-metal-700 rounded-xl px-3 py-2">
+            <i class="fa-solid fa-user-group text-metal-gold text-xs"></i>
+            <select id="global-user-switcher" onchange="switchViewUser(this.value)" class="bg-transparent text-xs font-semibold text-gray-300 focus:outline-none cursor-pointer">
+              <option value="ricardo" class="bg-metal-900">Acervo: Ricardo</option>
+              <option value="larissa" class="bg-metal-900">Acervo: Larissa</option>
+            </select>
+          </div>
+        </div>
 
         <!-- Admin Actions / Login Button -->
         <div class="flex items-center gap-2">
@@ -554,14 +566,25 @@
       if (sessionStorage.getItem('admin_authenticated') === 'true') {
         setAdminState(true);
       }
+      
+      const currentView = sessionStorage.getItem('view_user') || sessionStorage.getItem('current_user') || 'ricardo';
+      document.getElementById('global-user-switcher').value = currentView;
+
       updateUserSubtitle();
       initCharts();
     });
 
     function updateUserSubtitle() {
-      const user = sessionStorage.getItem('current_user') || 'ricardo';
-      const name = user === 'larissa' ? 'Larissa' : 'Ricardo';
+      const activeUser = sessionStorage.getItem('view_user') || sessionStorage.getItem('current_user') || 'ricardo';
+      const name = activeUser === 'larissa' ? 'Larissa' : 'Ricardo';
       document.getElementById('user-subtitle').textContent = `Acervo de ${name}`;
+    }
+
+    function switchViewUser(selectedUser) {
+      sessionStorage.setItem('view_user', selectedUser);
+      updateUserSubtitle();
+      window.initUserSession();
+      showToast(`Visualizando o acervo de ${selectedUser === 'larissa' ? 'Larissa' : 'Ricardo'}`, 'info');
     }
 
     function toggleAdminAuth() {
@@ -583,6 +606,8 @@
       if (PASSWORDS[selectedUser] && inputPass === PASSWORDS[selectedUser]) {
         sessionStorage.setItem('admin_authenticated', 'true');
         sessionStorage.setItem('current_user', selectedUser);
+        sessionStorage.setItem('view_user', selectedUser);
+        document.getElementById('global-user-switcher').value = selectedUser;
         errorMsg.classList.add('hidden');
         setAdminState(true);
         closeModal('login-modal');
@@ -803,8 +828,8 @@
       };
 
       try {
-        const currentUser = sessionStorage.getItem('current_user') || 'ricardo';
-        const colName = currentUser === 'larissa' ? 'cds_larissa' : 'cds';
+        const activeUser = sessionStorage.getItem('view_user') || sessionStorage.getItem('current_user') || 'ricardo';
+        const colName = activeUser === 'larissa' ? 'cds_larissa' : 'cds';
         const { setDoc, doc, collection } = window.firebaseMethods;
         await setDoc(doc(collection(window.db, colName), newId), newCd);
         closeModal('add-modal');
@@ -850,8 +875,8 @@
       };
 
       try {
-        const currentUser = sessionStorage.getItem('current_user') || 'ricardo';
-        const colName = currentUser === 'larissa' ? 'cds_larissa' : 'cds';
+        const activeUser = sessionStorage.getItem('view_user') || sessionStorage.getItem('current_user') || 'ricardo';
+        const colName = activeUser === 'larissa' ? 'cds_larissa' : 'cds';
         const { setDoc, doc, collection } = window.firebaseMethods;
         await setDoc(doc(collection(window.db, colName), id), updatedCd, { merge: true });
         closeModal('edit-modal');
@@ -874,8 +899,8 @@
     async function executeRemoveCd() {
       if (!targetDeleteId) return;
       try {
-        const currentUser = sessionStorage.getItem('current_user') || 'ricardo';
-        const colName = currentUser === 'larissa' ? 'cds_larissa' : 'cds';
+        const activeUser = sessionStorage.getItem('view_user') || sessionStorage.getItem('current_user') || 'ricardo';
+        const colName = activeUser === 'larissa' ? 'cds_larissa' : 'cds';
         const { deleteDoc, doc, collection } = window.firebaseMethods;
         await deleteDoc(doc(collection(window.db, colName), targetDeleteId));
         closeModal('delete-modal');
@@ -1077,8 +1102,8 @@
       };
 
       try {
-        const currentUser = sessionStorage.getItem('current_user') || 'ricardo';
-        const colName = currentUser === 'larissa' ? 'cds_larissa' : 'cds';
+        const activeUser = sessionStorage.getItem('view_user') || sessionStorage.getItem('current_user') || 'ricardo';
+        const colName = activeUser === 'larissa' ? 'cds_larissa' : 'cds';
         const { setDoc, doc, collection } = window.firebaseMethods;
         await setDoc(doc(collection(window.db, colName), newId), newCd);
         showToast(`Álbum "${newCd.title}" salvo!`, 'success');
@@ -1109,8 +1134,8 @@
         try {
           const imported = JSON.parse(e.target.result);
           if (Array.isArray(imported)) {
-            const currentUser = sessionStorage.getItem('current_user') || 'ricardo';
-            const colName = currentUser === 'larissa' ? 'cds_larissa' : 'cds';
+            const activeUser = sessionStorage.getItem('view_user') || sessionStorage.getItem('current_user') || 'ricardo';
+            const colName = activeUser === 'larissa' ? 'cds_larissa' : 'cds';
             const { setDoc, doc, collection } = window.firebaseMethods;
             for (const item of imported) {
               const id = item.id || ('cd-' + Date.now() + Math.random().toString(36).substr(2, 4));
