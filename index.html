@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>💿 Cadastro de CD - Acervo Digital</title>
+  <title>💿 Catálogo Digital de CD</title>
   
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -39,25 +39,41 @@
     // Inicialização do Firebase
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    const cdsCollection = collection(db, "cds");
 
-    // Disponibiliza as funções do Firebase no escopo global
     window.db = db;
-    window.cdsCollection = cdsCollection;
-    window.firebaseMethods = { setDoc, deleteDoc, doc };
+    window.firebaseMethods = { setDoc, deleteDoc, doc, collection };
+    window.unsubscribeCurrent = null;
 
-    // Escutar atualizações do Firestore em tempo real
-    onSnapshot(cdsCollection, (snapshot) => {
-      window.cdCatalog = [];
-      snapshot.forEach((docItem) => {
-        window.cdCatalog.push({ id: docItem.id, ...docItem.data() });
+    // Função para carregar a coleção dinâmica com base no usuário logado
+    window.initUserSession = function() {
+      const currentUser = sessionStorage.getItem('current_user') || 'ricardo';
+      const collectionName = currentUser === 'larissa' ? 'cds_larissa' : 'cds';
+      const cdsCollection = collection(db, collectionName);
+
+      // Cancela listener anterior se houver
+      if (window.unsubscribeCurrent) {
+        window.unsubscribeCurrent();
+      }
+
+      window.unsubscribeCurrent = onSnapshot(cdsCollection, (snapshot) => {
+        window.cdCatalog = [];
+        snapshot.forEach((docItem) => {
+          window.cdCatalog.push({ id: docItem.id, ...docItem.data() });
+        });
+        window.renderCatalog();
+        window.populateFilterOptions();
+        window.updateStatistics();
+      }, (error) => {
+        console.error("Erro ao carregar dados do Firebase:", error);
+        window.showToast("Erro ao conectar com o banco de dados online.", "error");
       });
-      window.renderCatalog();
-      window.populateFilterOptions();
-      window.updateStatistics();
-    }, (error) => {
-      console.error("Erro ao carregar dados do Firebase:", error);
-      window.showToast("Erro ao conectar com o banco de dados online.", "error");
+    };
+
+    window.addEventListener('load', () => {
+      window.initUserSession();
+      if (sessionStorage.getItem('admin_authenticated') === 'true') {
+        setAdminState(true);
+      }
     });
   </script>
 
@@ -117,210 +133,217 @@
     ::-webkit-scrollbar-thumb:hover { background: #485069; }
   </style>
 </head>
-<body class="bg-metal-900 text-gray-200 antialiased min-h-screen flex flex-col">
+<body class="bg-metal-900 text-gray-200 antialiased min-h-screen flex flex-col justify-between">
 
-  <!-- TOP HEADER -->
-  <header class="border-b border-metal-700 bg-metal-800/90 sticky top-0 z-40 backdrop-blur-md shadow-lg">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col md:flex-row items-center justify-between gap-4">
-      
-      <!-- Logo & Title -->
-      <div class="flex items-center gap-3">
-        <div class="relative flex items-center justify-center">
-          <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-metal-silver via-gray-400 to-metal-gold p-0.5 shadow-md cd-spin">
-            <div class="w-full h-full bg-metal-900 rounded-full flex items-center justify-center border border-gray-700">
-              <div class="w-3 h-3 bg-metal-gold rounded-full border border-gray-900"></div>
+  <div>
+    <!-- TOP HEADER -->
+    <header class="border-b border-metal-700 bg-metal-800/90 sticky top-0 z-40 backdrop-blur-md shadow-lg">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col md:flex-row items-center justify-between gap-4">
+        
+        <!-- Logo & Title -->
+        <div class="flex items-center gap-3">
+          <div class="relative flex items-center justify-center">
+            <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-metal-silver via-gray-400 to-metal-gold p-0.5 shadow-md cd-spin">
+              <div class="w-full h-full bg-metal-900 rounded-full flex items-center justify-center border border-gray-700">
+                <div class="w-3 h-3 bg-metal-gold rounded-full border border-gray-900"></div>
+              </div>
             </div>
+            <i class="fa-solid fa-compact-disc absolute text-xl text-metal-gold opacity-90"></i>
           </div>
-          <i class="fa-solid fa-compact-disc absolute text-xl text-metal-gold opacity-90"></i>
-        </div>
-        <div>
-          <div class="flex items-center gap-2">
-            <h1 class="text-2xl font-black font-display tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-gray-100 via-gray-300 to-metal-gold">
-              CADASTRO DE CD
-            </h1>
-            <span id="admin-badge" class="bg-red-900/60 text-red-300 border border-red-500/30 text-[10px] font-extrabold px-2 py-0.5 rounded uppercase hidden">ADMIN</span>
+          <div>
+            <div class="flex items-center gap-2">
+              <h1 class="text-2xl font-black font-display tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-gray-100 via-gray-300 to-metal-gold">
+                CATÁLOGO DIGITAL DE CD
+              </h1>
+              <span id="admin-badge" class="bg-red-900/60 text-red-300 border border-red-500/30 text-[10px] font-extrabold px-2 py-0.5 rounded uppercase hidden">ADMIN</span>
+            </div>
+            <p id="user-subtitle" class="text-xs text-gray-400 font-medium">Acervo de Ricardo</p>
           </div>
-          <p class="text-xs text-gray-400 font-medium">Acervo Digital da Minha Coleção de CD.</p>
         </div>
+
+        <!-- Navigation Tabs -->
+        <nav class="flex items-center gap-2 bg-metal-900/80 p-1.5 rounded-xl border border-metal-700">
+          <button id="tab-catalog-btn" onclick="switchTab('catalog')" class="px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 bg-metal-700 text-white shadow">
+            <i class="fa-solid fa-record-vinyl mr-2 text-metal-gold"></i>Coleção
+          </button>
+          <button id="tab-stats-btn" onclick="switchTab('stats')" class="px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 text-gray-400 hover:text-white">
+            <i class="fa-solid fa-chart-pie mr-2 text-metal-accent"></i>Estatísticas
+          </button>
+        </nav>
+
+        <!-- Admin Actions / Login Button -->
+        <div class="flex items-center gap-2">
+          <div id="admin-controls" class="hidden flex items-center gap-2">
+            <button onclick="openModal('add-modal')" class="px-3 py-2 rounded-xl bg-gradient-to-r from-red-700 to-red-900 hover:from-red-600 hover:to-red-800 text-white text-xs font-bold shadow transition flex items-center gap-1.5 border border-red-500/30">
+              <i class="fa-solid fa-plus"></i> Novo CD
+            </button>
+            <button onclick="openModal('search-modal')" class="px-3 py-2 rounded-xl bg-metal-700 hover:bg-metal-600 text-white text-xs font-semibold shadow transition flex items-center gap-1.5 border border-metal-500/30">
+              <i class="fa-solid fa-magnifying-glass text-metal-gold"></i> Buscar Online
+            </button>
+            <button onclick="exportJSON()" title="Exportar Backup cds.json" class="p-2 rounded-xl bg-metal-800 hover:bg-metal-700 text-gray-300 border border-metal-700 transition">
+              <i class="fa-solid fa-download"></i>
+            </button>
+            <button onclick="document.getElementById('import-file').click()" title="Importar Backup para Firebase" class="p-2 rounded-xl bg-metal-800 hover:bg-metal-700 text-gray-300 border border-metal-700 transition">
+              <i class="fa-solid fa-upload"></i>
+            </button>
+            <input type="file" id="import-file" accept=".json" class="hidden" onchange="importJSON(event)">
+          </div>
+
+          <button id="auth-btn" onclick="toggleAdminAuth()" class="px-3.5 py-2 rounded-xl bg-metal-800 hover:bg-metal-700 text-metal-gold border border-metal-gold/30 font-bold text-xs shadow transition flex items-center gap-1.5">
+            <i id="auth-icon" class="fa-solid fa-user-gear"></i> <span id="auth-label">Admin</span>
+          </button>
+        </div>
+
       </div>
+    </header>
 
-      <!-- Navigation Tabs -->
-      <nav class="flex items-center gap-2 bg-metal-900/80 p-1.5 rounded-xl border border-metal-700">
-        <button id="tab-catalog-btn" onclick="switchTab('catalog')" class="px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 bg-metal-700 text-white shadow">
-          <i class="fa-solid fa-record-vinyl mr-2 text-metal-gold"></i>Coleção
-        </button>
-        <button id="tab-stats-btn" onclick="switchTab('stats')" class="px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 text-gray-400 hover:text-white">
-          <i class="fa-solid fa-chart-pie mr-2 text-metal-accent"></i>Estatísticas
-        </button>
-      </nav>
+    <!-- MAIN CONTAINER -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 w-full pb-12">
 
-      <!-- Admin Actions / Login Button -->
-      <div class="flex items-center gap-2">
-        <div id="admin-controls" class="hidden flex items-center gap-2">
-          <button onclick="openModal('add-modal')" class="px-3 py-2 rounded-xl bg-gradient-to-r from-red-700 to-red-900 hover:from-red-600 hover:to-red-800 text-white text-xs font-bold shadow transition flex items-center gap-1.5 border border-red-500/30">
-            <i class="fa-solid fa-plus"></i> Novo CD
-          </button>
-          <button onclick="openModal('search-modal')" class="px-3 py-2 rounded-xl bg-metal-700 hover:bg-metal-600 text-white text-xs font-semibold shadow transition flex items-center gap-1.5 border border-metal-500/30">
-            <i class="fa-solid fa-magnifying-glass text-metal-gold"></i> Buscar Online
-          </button>
-          <button onclick="exportJSON()" title="Exportar Backup cds.json" class="p-2 rounded-xl bg-metal-800 hover:bg-metal-700 text-gray-300 border border-metal-700 transition">
-            <i class="fa-solid fa-download"></i>
-          </button>
-          <button onclick="document.getElementById('import-file').click()" title="Importar Backup para Firebase" class="p-2 rounded-xl bg-metal-800 hover:bg-metal-700 text-gray-300 border border-metal-700 transition">
-            <i class="fa-solid fa-upload"></i>
-          </button>
-          <input type="file" id="import-file" accept=".json" class="hidden" onchange="importJSON(event)">
-        </div>
+      <!-- Toast Notifications -->
+      <div id="toast-container" class="fixed bottom-12 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
-        <button id="auth-btn" onclick="toggleAdminAuth()" class="px-3.5 py-2 rounded-xl bg-metal-800 hover:bg-metal-700 text-metal-gold border border-metal-gold/30 font-bold text-xs shadow transition flex items-center gap-1.5">
-          <i id="auth-icon" class="fa-solid fa-user-gear"></i> <span id="auth-label">Admin</span>
-        </button>
-      </div>
+      <!-- CATALOG SECTION -->
+      <section id="section-catalog" class="space-y-4">
+        
+        <!-- Toolbar -->
+        <div class="glass-card p-4 rounded-2xl flex flex-col lg:flex-row gap-4 items-center justify-between">
+          <div class="relative w-full lg:w-72">
+            <i class="fa-solid fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"></i>
+            <input type="text" id="filter-search" oninput="renderCatalog()" placeholder="Filtrar por álbum, artista..." class="w-full pl-10 pr-4 py-2 bg-metal-900 border border-metal-700 rounded-xl text-sm focus:outline-none focus:border-metal-gold transition text-gray-200">
+          </div>
 
-    </div>
-  </header>
+          <div class="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+            <div class="flex items-center gap-1.5 bg-metal-900 border border-metal-700 rounded-xl px-2 py-1">
+              <i class="fa-solid fa-arrow-down-a-z text-metal-gold text-xs pl-1"></i>
+              <select id="sort-order" onchange="renderCatalog()" class="bg-transparent text-sm text-gray-300 focus:outline-none pr-1">
+                <option value="title" class="bg-metal-900">Ordem Alfabética (Álbum)</option>
+                <option value="artist" class="bg-metal-900">Ordem Alfabética (Artista)</option>
+                <option value="genre" class="bg-metal-900">Gênero (A-Z)</option>
+                <option value="year-desc" class="bg-metal-900">Ano (Mais Recentes)</option>
+                <option value="year-asc" class="bg-metal-900">Ano (Mais Antigos)</option>
+              </select>
+            </div>
 
-  <!-- MAIN CONTAINER -->
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 flex-grow w-full pb-12">
-
-    <!-- Toast Notifications -->
-    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
-
-    <!-- CATALOG SECTION -->
-    <section id="section-catalog" class="space-y-4">
-      
-      <!-- Toolbar -->
-      <div class="glass-card p-4 rounded-2xl flex flex-col lg:flex-row gap-4 items-center justify-between">
-        <div class="relative w-full lg:w-72">
-          <i class="fa-solid fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"></i>
-          <input type="text" id="filter-search" oninput="renderCatalog()" placeholder="Filtrar por álbum, artista..." class="w-full pl-10 pr-4 py-2 bg-metal-900 border border-metal-700 rounded-xl text-sm focus:outline-none focus:border-metal-gold transition text-gray-200">
-        </div>
-
-        <div class="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-          <div class="flex items-center gap-1.5 bg-metal-900 border border-metal-700 rounded-xl px-2 py-1">
-            <i class="fa-solid fa-arrow-down-a-z text-metal-gold text-xs pl-1"></i>
-            <select id="sort-order" onchange="renderCatalog()" class="bg-transparent text-sm text-gray-300 focus:outline-none pr-1">
-              <option value="title" class="bg-metal-900">Ordem Alfabética (Álbum)</option>
-              <option value="artist" class="bg-metal-900">Ordem Alfabética (Artista)</option>
-              <option value="genre" class="bg-metal-900">Gênero (A-Z)</option>
-              <option value="year-desc" class="bg-metal-900">Ano (Mais Recentes)</option>
-              <option value="year-asc" class="bg-metal-900">Ano (Mais Antigos)</option>
+            <select id="filter-genre" onchange="renderCatalog()" class="bg-metal-900 border border-metal-700 rounded-xl px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-metal-gold">
+              <option value="">Todos os Gêneros</option>
             </select>
-          </div>
 
-          <select id="filter-genre" onchange="renderCatalog()" class="bg-metal-900 border border-metal-700 rounded-xl px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-metal-gold">
-            <option value="">Todos os Gêneros</option>
-          </select>
+            <select id="filter-country" onchange="renderCatalog()" class="bg-metal-900 border border-metal-700 rounded-xl px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-metal-gold">
+              <option value="">Todos os Países</option>
+            </select>
 
-          <select id="filter-country" onchange="renderCatalog()" class="bg-metal-900 border border-metal-700 rounded-xl px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-metal-gold">
-            <option value="">Todos os Países</option>
-          </select>
+            <label id="incomplete-filter-label" class="hidden items-center gap-2 bg-metal-900 border border-metal-700 px-3 py-2 rounded-xl text-xs font-semibold text-amber-400 cursor-pointer hover:border-amber-500/50 transition">
+              <input type="checkbox" id="filter-incomplete" onchange="renderCatalog()" class="rounded bg-metal-800 border-metal-600 text-metal-gold focus:ring-0">
+              <span><i class="fa-solid fa-triangle-exclamation mr-1"></i>Incompletos</span>
+            </label>
 
-          <label id="incomplete-filter-label" class="hidden items-center gap-2 bg-metal-900 border border-metal-700 px-3 py-2 rounded-xl text-xs font-semibold text-amber-400 cursor-pointer hover:border-amber-500/50 transition">
-            <input type="checkbox" id="filter-incomplete" onchange="renderCatalog()" class="rounded bg-metal-800 border-metal-600 text-metal-gold focus:ring-0">
-            <span><i class="fa-solid fa-triangle-exclamation mr-1"></i>Incompletos</span>
-          </label>
-
-          <div class="flex bg-metal-900 border border-metal-700 rounded-xl p-1 gap-1">
-            <button id="view-grid-btn" onclick="setViewMode('grid')" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-metal-700 text-white shadow">
-              <i class="fa-solid fa-th-large"></i>
-            </button>
-            <button id="view-shelf-btn" onclick="setViewMode('shelf')" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-400 hover:text-white">
-              <i class="fa-solid fa-list"></i>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Result Count Feedback -->
-      <div id="search-result-count" class="text-xs font-bold text-gray-400 px-2 flex items-center justify-between"></div>
-
-      <!-- Catalog Container -->
-      <div id="catalog-container"></div>
-    </section>
-
-    <!-- STATISTICS SECTION -->
-    <section id="section-stats" class="space-y-6 hidden">
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="glass-card p-5 rounded-2xl flex items-center gap-4">
-          <div class="w-12 h-12 rounded-xl bg-metal-700 flex items-center justify-center text-metal-gold text-2xl">
-            <i class="fa-solid fa-compact-disc"></i>
-          </div>
-          <div>
-            <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">Total de CDs</p>
-            <h3 id="stat-total-cds" class="text-2xl font-black text-white">0</h3>
-          </div>
-        </div>
-
-        <div class="glass-card p-5 rounded-2xl flex items-center gap-4">
-          <div class="w-12 h-12 rounded-xl bg-metal-700 flex items-center justify-center text-red-400 text-2xl">
-            <i class="fa-solid fa-users"></i>
-          </div>
-          <div>
-            <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">Artistas / Bandas</p>
-            <h3 id="stat-total-artists" class="text-2xl font-black text-white">0</h3>
-          </div>
-        </div>
-
-        <div class="glass-card p-5 rounded-2xl flex items-center gap-4">
-          <div class="w-12 h-12 rounded-xl bg-metal-700 flex items-center justify-center text-blue-400 text-2xl">
-            <i class="fa-solid fa-earth-americas"></i>
-          </div>
-          <div>
-            <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">Países Representados</p>
-            <h3 id="stat-total-countries" class="text-2xl font-black text-white">0</h3>
-          </div>
-        </div>
-
-        <div class="glass-card p-5 rounded-2xl flex items-center gap-4">
-          <div class="w-12 h-12 rounded-xl bg-metal-700 flex items-center justify-center text-green-400 text-2xl">
-            <i class="fa-solid fa-layer-group"></i>
-          </div>
-          <div>
-            <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">Gêneros</p>
-            <h3 id="stat-total-genres" class="text-2xl font-black text-white">0</h3>
-          </div>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- Chart & Table for Genres -->
-        <div class="glass-card p-6 rounded-2xl space-y-4">
-          <h3 class="text-lg font-bold text-gray-100 flex items-center gap-2">
-            <i class="fa-solid fa-chart-pie text-metal-gold"></i> Distribuição por Gênero
-          </h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-            <div class="relative h-56 w-full flex items-center justify-center">
-              <canvas id="chart-genres"></canvas>
-            </div>
-            <div class="max-h-56 overflow-y-auto pr-1">
-              <table class="w-full text-xs text-left text-gray-300">
-                <thead class="text-[10px] uppercase bg-metal-900/80 text-gray-400 border-b border-metal-700">
-                  <tr>
-                    <th class="py-2 px-2">Gênero</th>
-                    <th class="py-2 px-2 text-center">CDs</th>
-                    <th class="py-2 px-2 text-right">%</th>
-                  </tr>
-                </thead>
-                <tbody id="table-genres-body" class="divide-y divide-metal-800"></tbody>
-              </table>
+            <div class="flex bg-metal-900 border border-metal-700 rounded-xl p-1 gap-1">
+              <button id="view-grid-btn" onclick="setViewMode('grid')" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-metal-700 text-white shadow">
+                <i class="fa-solid fa-th-large"></i>
+              </button>
+              <button id="view-shelf-btn" onclick="setViewMode('shelf')" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-400 hover:text-white">
+                <i class="fa-solid fa-list"></i>
+              </button>
             </div>
           </div>
         </div>
 
-        <!-- Country Chart -->
-        <div class="glass-card p-6 rounded-2xl space-y-4">
-          <h3 class="text-lg font-bold text-gray-100 flex items-center gap-2">
-            <i class="fa-solid fa-flag text-red-400"></i> Álbuns por País de Origem
-          </h3>
-          <div class="relative h-64 w-full flex items-center justify-center">
-            <canvas id="chart-countries"></canvas>
+        <!-- Result Count Feedback -->
+        <div id="search-result-count" class="text-xs font-bold text-gray-400 px-2 flex items-center justify-between"></div>
+
+        <!-- Catalog Container -->
+        <div id="catalog-container"></div>
+      </section>
+
+      <!-- STATISTICS SECTION -->
+      <section id="section-stats" class="space-y-6 hidden">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="glass-card p-5 rounded-2xl flex items-center gap-4">
+            <div class="w-12 h-12 rounded-xl bg-metal-700 flex items-center justify-center text-metal-gold text-2xl">
+              <i class="fa-solid fa-compact-disc"></i>
+            </div>
+            <div>
+              <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">Total de CDs</p>
+              <h3 id="stat-total-cds" class="text-2xl font-black text-white">0</h3>
+            </div>
+          </div>
+
+          <div class="glass-card p-5 rounded-2xl flex items-center gap-4">
+            <div class="w-12 h-12 rounded-xl bg-metal-700 flex items-center justify-center text-red-400 text-2xl">
+              <i class="fa-solid fa-users"></i>
+            </div>
+            <div>
+              <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">Artistas / Bandas</p>
+              <h3 id="stat-total-artists" class="text-2xl font-black text-white">0</h3>
+            </div>
+          </div>
+
+          <div class="glass-card p-5 rounded-2xl flex items-center gap-4">
+            <div class="w-12 h-12 rounded-xl bg-metal-700 flex items-center justify-center text-blue-400 text-2xl">
+              <i class="fa-solid fa-earth-americas"></i>
+            </div>
+            <div>
+              <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">Países Representados</p>
+              <h3 id="stat-total-countries" class="text-2xl font-black text-white">0</h3>
+            </div>
+          </div>
+
+          <div class="glass-card p-5 rounded-2xl flex items-center gap-4">
+            <div class="w-12 h-12 rounded-xl bg-metal-700 flex items-center justify-center text-green-400 text-2xl">
+              <i class="fa-solid fa-layer-group"></i>
+            </div>
+            <div>
+              <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">Gêneros</p>
+              <h3 id="stat-total-genres" class="text-2xl font-black text-white">0</h3>
+            </div>
           </div>
         </div>
-      </div>
-    </section>
 
-  </main>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Chart & Table for Genres -->
+          <div class="glass-card p-6 rounded-2xl space-y-4">
+            <h3 class="text-lg font-bold text-gray-100 flex items-center gap-2">
+              <i class="fa-solid fa-chart-pie text-metal-gold"></i> Distribuição por Gênero
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+              <div class="relative h-56 w-full flex items-center justify-center">
+                <canvas id="chart-genres"></canvas>
+              </div>
+              <div class="max-h-56 overflow-y-auto pr-1">
+                <table class="w-full text-xs text-left text-gray-300">
+                  <thead class="text-[10px] uppercase bg-metal-900/80 text-gray-400 border-b border-metal-700">
+                    <tr>
+                      <th class="py-2 px-2">Gênero</th>
+                      <th class="py-2 px-2 text-center">CDs</th>
+                      <th class="py-2 px-2 text-right">%</th>
+                    </tr>
+                  </thead>
+                  <tbody id="table-genres-body" class="divide-y divide-metal-800"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Country Chart -->
+          <div class="glass-card p-6 rounded-2xl space-y-4">
+            <h3 class="text-lg font-bold text-gray-100 flex items-center gap-2">
+              <i class="fa-solid fa-flag text-red-400"></i> Álbuns por País de Origem
+            </h3>
+            <div class="relative h-64 w-full flex items-center justify-center">
+              <canvas id="chart-countries"></canvas>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="bg-metal-800/80 border-t border-metal-700 py-4 text-center text-xs text-gray-400 mt-auto">
+    Desenvolvido por Ricardo Wagner
+  </footer>
 
   <!-- MODALS -->
 
@@ -333,13 +356,21 @@
       </div>
       <div>
         <h2 class="text-2xl font-black font-display text-white tracking-wide">PAINEL DO ADMINISTRADOR</h2>
-        <p class="text-xs text-gray-400 mt-1">Digite a senha para gerenciar o acervo de CDs</p>
+        <p class="text-xs text-gray-400 mt-1">Selecione o usuário e digite a senha</p>
       </div>
 
-      <form onsubmit="handleLogin(event)" class="space-y-4">
+      <form onsubmit="handleLogin(event)" class="space-y-4 text-left">
         <div>
+          <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Usuário</label>
+          <select id="login-user-select" class="w-full bg-metal-900 border border-metal-700 rounded-xl p-3 text-sm text-white focus:border-metal-gold outline-none">
+            <option value="ricardo">Ricardo (Senha: rock)</option>
+            <option value="larissa">Larissa (Senha: oasis)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Senha</label>
           <input type="password" id="admin-password-input" placeholder="Digite a senha..." required class="w-full bg-metal-900 border border-metal-700 rounded-xl p-3 text-sm focus:border-metal-gold outline-none text-white text-center tracking-widest text-lg">
-          <p id="login-error-msg" class="text-xs text-red-400 font-semibold mt-2 hidden">⚠️ Senha incorreta. Tente novamente.</p>
+          <p id="login-error-msg" class="text-xs text-red-400 font-semibold mt-2 hidden text-center">⚠️ Senha incorreta para este usuário.</p>
         </div>
         <button type="submit" class="w-full py-3 rounded-xl bg-gradient-to-r from-metal-gold to-yellow-600 hover:from-yellow-400 hover:to-yellow-500 text-metal-900 font-extrabold text-sm shadow-lg transition">
           <i class="fa-solid fa-key mr-2"></i> Entrar no Modo Admin
@@ -506,7 +537,10 @@
 
   <!-- JAVASCRIPT LOGIC -->
   <script>
-    const ADMIN_PASSWORD = "rock"; // Senha admin
+    const PASSWORDS = {
+      ricardo: "rock",
+      larissa: "oasis"
+    };
 
     window.cdCatalog = [];
     let isAdmin = false;
@@ -520,8 +554,15 @@
       if (sessionStorage.getItem('admin_authenticated') === 'true') {
         setAdminState(true);
       }
+      updateUserSubtitle();
       initCharts();
     });
+
+    function updateUserSubtitle() {
+      const user = sessionStorage.getItem('current_user') || 'ricardo';
+      const name = user === 'larissa' ? 'Larissa' : 'Ricardo';
+      document.getElementById('user-subtitle').textContent = `Acervo de ${name}`;
+    }
 
     function toggleAdminAuth() {
       if (isAdmin) {
@@ -535,16 +576,20 @@
 
     function handleLogin(e) {
       e.preventDefault();
+      const selectedUser = document.getElementById('login-user-select').value;
       const inputPass = document.getElementById('admin-password-input').value;
       const errorMsg = document.getElementById('login-error-msg');
 
-      if (inputPass === ADMIN_PASSWORD) {
+      if (PASSWORDS[selectedUser] && inputPass === PASSWORDS[selectedUser]) {
         sessionStorage.setItem('admin_authenticated', 'true');
+        sessionStorage.setItem('current_user', selectedUser);
         errorMsg.classList.add('hidden');
         setAdminState(true);
         closeModal('login-modal');
         document.getElementById('admin-password-input').value = '';
-        showToast("Modo Administrador ativado!", "success");
+        updateUserSubtitle();
+        window.initUserSession();
+        showToast(`Modo Administrador ativado (${selectedUser === 'larissa' ? 'Larissa' : 'Ricardo'})!`, 'success');
       } else {
         errorMsg.classList.remove('hidden');
         document.getElementById('admin-password-input').value = '';
@@ -758,11 +803,13 @@
       };
 
       try {
-        const { setDoc, doc } = window.firebaseMethods;
-        await setDoc(doc(window.db, "cds", newId), newCd);
+        const currentUser = sessionStorage.getItem('current_user') || 'ricardo';
+        const colName = currentUser === 'larissa' ? 'cds_larissa' : 'cds';
+        const { setDoc, doc, collection } = window.firebaseMethods;
+        await setDoc(doc(collection(window.db, colName), newId), newCd);
         closeModal('add-modal');
         document.getElementById('add-cd-form').reset();
-        showToast(`Álbum "${title}" cadastrado no Firebase!`, 'success');
+        showToast(`Álbum "${title}" cadastrado!`, 'success');
       } catch (err) {
         console.error(err);
         showToast('Erro ao salvar álbum no Firebase.', 'error');
@@ -803,10 +850,12 @@
       };
 
       try {
-        const { setDoc, doc } = window.firebaseMethods;
-        await setDoc(doc(window.db, "cds", id), updatedCd, { merge: true });
+        const currentUser = sessionStorage.getItem('current_user') || 'ricardo';
+        const colName = currentUser === 'larissa' ? 'cds_larissa' : 'cds';
+        const { setDoc, doc, collection } = window.firebaseMethods;
+        await setDoc(doc(collection(window.db, colName), id), updatedCd, { merge: true });
         closeModal('edit-modal');
-        showToast('Álbum atualizado no Firebase!', 'success');
+        showToast('Álbum atualizado!', 'success');
       } catch (err) {
         console.error(err);
         showToast('Erro ao atualizar no Firebase.', 'error');
@@ -825,8 +874,10 @@
     async function executeRemoveCd() {
       if (!targetDeleteId) return;
       try {
-        const { deleteDoc, doc } = window.firebaseMethods;
-        await deleteDoc(doc(window.db, "cds", targetDeleteId));
+        const currentUser = sessionStorage.getItem('current_user') || 'ricardo';
+        const colName = currentUser === 'larissa' ? 'cds_larissa' : 'cds';
+        const { deleteDoc, doc, collection } = window.firebaseMethods;
+        await deleteDoc(doc(collection(window.db, colName), targetDeleteId));
         closeModal('delete-modal');
         closeModal('details-modal');
         showToast(`Álbum removido com sucesso.`, 'success');
@@ -888,8 +939,7 @@
             <h5 id="lyrics-title" class="text-xs font-bold text-metal-gold uppercase"></h5>
             <button onclick="document.getElementById('lyrics-box').classList.add('hidden')" class="text-gray-400 text-xs">Fechar</button>
           </div>
-          <p id="lyrics-summary" class="text-xs text-gray-300 italic mb-2"></p>
-          <pre id="lyrics-body" class="text-xs text-gray-300 whitespace-pre-wrap font-sans max-h-48 overflow-y-auto"></pre>
+          <pre id="lyrics-body" class="text-xs text-gray-300 whitespace-pre-wrap font-sans max-h-60 overflow-y-auto p-2 bg-metal-800 rounded-lg"></pre>
           <div id="lyrics-link" class="pt-2 text-right"></div>
         </div>
       `;
@@ -900,14 +950,12 @@
     async function fetchLyrics(artist, track) {
       const box = document.getElementById('lyrics-box');
       const titleEl = document.getElementById('lyrics-title');
-      const summaryEl = document.getElementById('lyrics-summary');
       const bodyEl = document.getElementById('lyrics-body');
       const linkEl = document.getElementById('lyrics-link');
 
       box.classList.remove('hidden');
       titleEl.textContent = `${track} - ${artist}`;
-      summaryEl.textContent = `A faixa "${track}" de ${artist} aborda temas marcantes de sua discografia.`;
-      bodyEl.textContent = "Buscando amostra da letra...";
+      bodyEl.textContent = "Buscando letra completa...";
       linkEl.innerHTML = '';
 
       try {
@@ -916,15 +964,14 @@
         const data = await response.json();
         
         if (data.plainLyrics) {
-          const lines = data.plainLyrics.split('\n').filter(l => l.trim() !== '').slice(0, 4);
-          bodyEl.textContent = lines.join('\n') + '\n...';
+          bodyEl.textContent = data.plainLyrics;
           const query = encodeURIComponent(`${artist} ${track} letra`);
-          linkEl.innerHTML = `<a href="https://www.google.com/search?q=${query}" target="_blank" class="text-xs text-metal-gold font-bold hover:underline"><i class="fa-solid fa-up-right-from-square mr-1"></i>Ver letra completa no Google Search</a>`;
+          linkEl.innerHTML = `<a href="https://www.google.com/search?q=${query}" target="_blank" class="text-xs text-metal-gold font-bold hover:underline"><i class="fa-solid fa-up-right-from-square mr-1"></i>Ver no Google Search</a>`;
         } else {
-          bodyEl.textContent = "Amostra da letra indisponível.";
+          bodyEl.textContent = "Letra completa indisponível na base de dados.";
         }
       } catch (err) {
-        bodyEl.textContent = "Não foi possível carregar a amostra da letra.";
+        bodyEl.textContent = "Não foi possível carregar a letra.";
         const query = encodeURIComponent(`${artist} ${track} letra`);
         linkEl.innerHTML = `<a href="https://www.google.com/search?q=${query}" target="_blank" class="text-xs text-metal-gold font-bold hover:underline"><i class="fa-solid fa-up-right-from-square mr-1"></i>Buscar letra no Google Search</a>`;
       }
@@ -1030,9 +1077,11 @@
       };
 
       try {
-        const { setDoc, doc } = window.firebaseMethods;
-        await setDoc(doc(window.db, "cds", newId), newCd);
-        showToast(`Álbum "${newCd.title}" salvo no Firebase!`, 'success');
+        const currentUser = sessionStorage.getItem('current_user') || 'ricardo';
+        const colName = currentUser === 'larissa' ? 'cds_larissa' : 'cds';
+        const { setDoc, doc, collection } = window.firebaseMethods;
+        await setDoc(doc(collection(window.db, colName), newId), newCd);
+        showToast(`Álbum "${newCd.title}" salvo!`, 'success');
         searchOnlineAlbums();
       } catch (err) {
         console.error(err);
@@ -1048,7 +1097,7 @@
       document.body.appendChild(downloadAnchor);
       downloadAnchor.click();
       downloadAnchor.remove();
-      showToast('Backup cds.json exportado!', 'success');
+      showToast('Backup exportado!', 'success');
     }
 
     function importJSON(event) {
@@ -1060,20 +1109,22 @@
         try {
           const imported = JSON.parse(e.target.result);
           if (Array.isArray(imported)) {
-            const { setDoc, doc } = window.firebaseMethods;
+            const currentUser = sessionStorage.getItem('current_user') || 'ricardo';
+            const colName = currentUser === 'larissa' ? 'cds_larissa' : 'cds';
+            const { setDoc, doc, collection } = window.firebaseMethods;
             for (const item of imported) {
               const id = item.id || ('cd-' + Date.now() + Math.random().toString(36).substr(2, 4));
               const data = { ...item };
               delete data.id;
-              await setDoc(doc(window.db, "cds", id), data);
+              await setDoc(doc(collection(window.db, colName), id), data);
             }
-            showToast('Coleção enviada para o Firebase com sucesso!', 'success');
+            showToast('Backup importado com sucesso!', 'success');
           } else {
             showToast('Formato de JSON inválido.', 'error');
           }
         } catch (err) {
           console.error(err);
-          showToast('Erro ao enviar backup para o Firebase.', 'error');
+          showToast('Erro ao importar backup.', 'error');
         }
       };
       reader.readAsText(file);
@@ -1109,14 +1160,12 @@
       const genreCounts = {};
       window.cdCatalog.forEach(cd => { const g = cd.genre || 'Outros'; genreCounts[g] = (genreCounts[g] || 0) + 1; });
       
-      // Atualiza o Gráfico de Gêneros
       if (genreChart) { 
         genreChart.data.labels = Object.keys(genreCounts); 
         genreChart.data.datasets[0].data = Object.values(genreCounts); 
         genreChart.update(); 
       }
 
-      // Preenche a Tabela de Distribuição por Gênero
       const tableBody = document.getElementById('table-genres-body');
       if (tableBody) {
         const sortedGenres = Object.entries(genreCounts).sort((a, b) => b[1] - a[1]);
