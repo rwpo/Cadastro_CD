@@ -173,7 +173,7 @@
             </button>
           </nav>
 
-          <!-- Seletor Rápido de Acervo (Visível para Visitantes e Admins) -->
+          <!-- Seletor Rápido de Acervo -->
           <div class="flex items-center gap-1.5 bg-metal-900 border border-metal-700 rounded-xl px-3 py-2">
             <i class="fa-solid fa-user-group text-metal-gold text-xs"></i>
             <select id="global-user-switcher" onchange="switchViewUser(this.value)" class="bg-transparent text-xs font-semibold text-gray-300 focus:outline-none cursor-pointer">
@@ -1040,13 +1040,15 @@
           detectedFormat = "Duplo";
         }
 
+        const countryCode = album.country || '';
+
         return `
           <div class="p-3 rounded-xl bg-metal-900 border border-metal-700 flex items-center justify-between gap-4">
             <div class="flex items-center gap-3 min-w-0">
               <img src="${artwork}" alt="${album.collectionName}" class="w-12 h-12 rounded-lg object-cover flex-shrink-0">
               <div class="min-w-0">
                 <h4 class="text-sm font-bold text-white truncate">${album.collectionName}</h4>
-                <p class="text-xs text-gray-400 truncate">${album.artistName} • ${album.primaryGenreName}</p>
+                <p class="text-xs text-gray-400 truncate">${album.artistName} • ${album.primaryGenreName} ${countryCode ? '• ' + countryCode : ''}</p>
                 <p class="text-[10px] text-gray-500">${album.releaseDate ? album.releaseDate.substring(0, 4) : 'N/A'} • <span class="text-gray-300 font-medium">${detectedFormat}</span> (${album.trackCount || 0} faixas)</p>
               </div>
             </div>
@@ -1088,6 +1090,19 @@
         detectedFormat = "Duplo";
       }
 
+      // Mapeamento automático inteligente do código de país do iTunes para formato legível
+      let mappedCountry = "";
+      const c = (album.country || '').toUpperCase();
+      if (c === 'USA' || c === 'US') mappedCountry = 'Estados Unidos';
+      else if (c === 'GBR' || c === 'GB' || c === 'UK') mappedCountry = 'Reino Unido';
+      else if (c === 'BRA' || c === 'BR') mappedCountry = 'Brasil';
+      else if (c === 'CAN' || c === 'CA') mappedCountry = 'Canadá';
+      else if (c === 'AUS' || c === 'AU') mappedCountry = 'Austrália';
+      else if (c === 'DEU' || c === 'DE') mappedCountry = 'Alemanha';
+      else if (c === 'FRA' || c === 'FR') mappedCountry = 'França';
+      else if (c === 'JPN' || c === 'JP') mappedCountry = 'Japão';
+      else mappedCountry = album.country || '';
+
       const cover = album.artworkUrl100 ? album.artworkUrl100.replace('100x100bb', '600x600bb') : '';
       const newId = 'cd-' + Date.now();
       const newCd = {
@@ -1096,7 +1111,7 @@
         genre: album.primaryGenreName || 'Rock',
         format: detectedFormat,
         year: album.releaseDate ? parseInt(album.releaseDate.substring(0, 4)) : null,
-        country: '', 
+        country: mappedCountry, 
         cover: cover, 
         tracks: tracks
       };
@@ -1106,7 +1121,7 @@
         const colName = activeUser === 'larissa' ? 'cds_larissa' : 'cds';
         const { setDoc, doc, collection } = window.firebaseMethods;
         await setDoc(doc(collection(window.db, colName), newId), newCd);
-        showToast(`Álbum "${newCd.title}" salvo!`, 'success');
+        showToast(`Álbum "${newCd.title}" salvo com país (${mappedCountry || 'N/A'})!`, 'success');
         searchOnlineAlbums();
       } catch (err) {
         console.error(err);
@@ -1207,6 +1222,7 @@
       }
 
       const countryCounts = {};
+      window.cdCatalog.formatCd = window.cdCatalog.forEach(cd => { const c = cd.country || 'Não Informado'; countryCounts[c] = (countryCounts[c] || 0) + 1; });
       window.cdCatalog.forEach(cd => { const c = cd.country || 'Não Informado'; countryCounts[c] = (countryCounts[c] || 0) + 1; });
       if (countryChart) { 
         countryChart.data.labels = Object.keys(countryCounts); 
